@@ -1,11 +1,21 @@
-circle{
-  fill:red;
-  position: absolute;
-};
 
-#viewbox{
-  width:500;
-  height:1000;
-  position: relative;
-  background-color: green;
+svg {
+  background-color: blue;
+  overflow:visible;
+  position:absolute;
+}
+
+circle {
+  fill:red;
+}
+
+#Middle {
+  fill: orange;
+}
+
+#viewbox {
+  width:350px;
+  height:350px;
+  position: absolute;
+  background: green;
 }
