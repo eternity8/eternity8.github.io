@@ -14,8 +14,9 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               function makeTheta(i){
                 return i;
               }
-
-              var circles = d3.select("svg").append("g").attr("transform",function(){return "translate(" + width/2 + ", " + height/2 + ")";}).selectAll("circle")
+              var mySVG = d3.select("svg");
+              mySVG.call(d3.zoom().on("zoom",function(){mySVG.attr("transform","scale("+ 2 +")")}));
+              var circles = mySVG.append("g").attr("transform",function(){return "translate(" + width/2 + ", " + height/2 + ")";}).selectAll("circle")
                   .data(myData).enter().append("circle");
 
               d3.select("svg").append("circle").attr("cx",0)
