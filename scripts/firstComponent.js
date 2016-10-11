@@ -1,7 +1,7 @@
 
 width = 350;
 height = 350;
-d3.select("svg").attr("width",width)
+var mySVG = d3.select("svg").attr("width",width)
                 .attr("height",height);
 
 d3.csv("http://localhost/data/slavedata3.csv", function(myData){
@@ -14,8 +14,14 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               function makeTheta(i){
                 return i;
               }
-              var mySVG = d3.select("svg");
-              mySVG.call(d3.zoom().on("zoom",function(){mySVG.attr("transform","scale("+ 2 +")")}));
+
+              function myZoomHandler(){
+                mySVG.select("g").attr("transform","translate("+zoom.event.translate+ ")");
+              }
+              var zoom = d3.zoom().scaleExtent([1/10,2]).on("zoom",myZoomHandler);
+
+              mySVG.select("g").call(zoom);
+
               var circles = mySVG.append("g").attr("transform",function(){return "translate(" + width/2 + ", " + height/2 + ")";}).selectAll("circle")
                   .data(myData).enter().append("circle");
 
@@ -23,6 +29,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                                                .attr("cy",0)
                                                .attr("r",1)
                                                .attr("id","Middle");
+
               circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta(i));})
                      .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta(i));})
                      .attr("r",1);
