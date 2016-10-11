@@ -27,7 +27,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               var circles = mySVG.append("g").attr("transform",function(){return "translate(" + width/2 + ", " + height/2 + ")";}).selectAll("circle")
                   .data(myData).enter().append("circle");
 
-              d3.select("svg").select("g").append("circle").attr("cx",0)
+              d3.select("#zoomBox").select("g").append("circle").attr("cx",0)
                                                .attr("cy",0)
                                                .attr("r",0.4)
                                                .attr("id","Middle");
