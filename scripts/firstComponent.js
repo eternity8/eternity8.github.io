@@ -4,6 +4,8 @@ height = 350;
 var mySVG = d3.select("#zoomBox").attr("width",width)
                 .attr("height",height);
 
+var textFields = d3.selectAll(".paneltext");
+
 d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               //Display something to console
               console.log(myData[0]);
@@ -19,15 +21,16 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               //Functions for applying zoom
               function myZoomHandler(){
                 scaleFactor = (d3.event.transform.k);
-
                 group.attr("transform", "translate(" + width/2 +", " + height/2 +") scale("+d3.event.transform.k+ ")");
                 circles.style("fill","blue");
                 visible = circles.filter(function(d,i){var radius = makeRadius(d.yearam);
                                                       //      if(i===4){console.log(makeRadius(d.yearam)+ " " + width/2 + " " + radius*scaleFactor);};
                                                         return radius*scaleFactor<(width/2);});
                 visible.style("fill","pink");
-                var sum =  d3.sum(visible.data(),function(d){return d.embarked;});
-                console.log(sum);
+                var numVoyages = visible.size();
+                var embarked = d3.sum(visible.data(),function(d){return +d.embarked;});
+                var died = d3.sum(visible.data(),function(d){return +d.embarked - +d.disembarked;})
+                textFields.data([numVoyages,embarked,died]).innerHTML=function(d){return d};
               }
 
               //define zoom behaviour and scale Extent

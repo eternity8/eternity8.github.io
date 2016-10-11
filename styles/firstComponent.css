@@ -2,7 +2,7 @@
 svg {
   background-color: white;
 /*  overflow:visible;*/
-  position:absolute;
+  position:static;
 }
 
 circle {
@@ -13,9 +13,18 @@ circle {
   fill: red;
 }
 
+#updatePanel {
+  position:static;
+  float: left;
+}
+
+.paneltext {
+  color: blue;
+}
 #viewbox {
   width:350px;
   height:350px;
-  position: absolute;
+  position: static;
+  float: left;
   background: green;
 }
