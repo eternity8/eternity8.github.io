@@ -1,7 +1,7 @@
 
 svg {
   background-color: white;
-  overflow:hidden;
+/*  overflow:visible;*/
   position:absolute;
 }
 

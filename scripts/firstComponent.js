@@ -18,23 +18,35 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               }
               //Functions for applying zoom
               function myZoomHandler(){
-                mySVG.select("g").attr("transform", "translate(" + width/2 +", " + height/2 +") scale("+d3.event.transform.k+ ")");
+                scaleFactor = (d3.event.transform.k);
+
+                group.attr("transform", "translate(" + width/2 +", " + height/2 +") scale("+d3.event.transform.k+ ")");
+                circles.style("fill","blue");
+                visible = circles.filter(function(d,i){var radius = makeRadius(d.yearam);
+                                                      //      if(i===4){console.log(makeRadius(d.yearam)+ " " + width/2 + " " + radius*scaleFactor);};
+                                                        return radius*scaleFactor<(width/2);});
+                visible.style("fill","pink");
+                var sum =  d3.sum(visible.data(),function(d){return d.embarked;});
+                console.log(sum);
               }
-              var zoom = d3.zoom().scaleExtent([1,50]).on("zoom",myZoomHandler);
+
+              //define zoom behaviour and scale Extent
+              var zoom = d3.zoom().scaleExtent([1,400]).on("zoom",myZoomHandler);
 
               mySVG.call(zoom);
 
-              var circles = mySVG.append("g").attr("transform",function(){return "translate(" + width/2 + ", " + height/2 + ")";}).selectAll("circle")
-                  .data(myData).enter().append("circle");
-
-              d3.select("#zoomBox").select("g").append("circle").attr("cx",0)
-                                               .attr("cy",0)
-                                               .attr("r",0.4)
-                                               .attr("id","Middle");
+              var group = mySVG.append("g").attr("id","cgroup").attr("transform",function(){return "translate(" + width/2 + ", " + height/2+") scale( " +400+ ")"});
+              var circles = group.selectAll("circle").data(myData).enter().append("circle");
+              mySVG.call(zoom.transform, d3.zoomIdentity.scale(400));
+              var centreCircle = group.append("circle").attr("cx",0)
+                                    .attr("cy",0)
+                                    .attr("r",0.4)
+                                    .attr("id","Middle");
 
               circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta(i));})
                      .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta(i));})
                      .attr("r",0.4);
+
 
   //            function addValToObject(myObject){myObject["newKey"]="Hello";};
 
