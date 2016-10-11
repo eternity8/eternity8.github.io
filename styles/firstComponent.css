@@ -1,16 +1,16 @@
 
 svg {
-  background-color: blue;
-  overflow:visible;
+  background-color: white;
+  overflow:hidden;
   position:absolute;
 }
 
 circle {
-  fill:red;
+  fill:black;
 }
 
 #Middle {
-  fill: orange;
+  fill: red;
 }
 
 #viewbox {
