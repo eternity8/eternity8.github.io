@@ -12,7 +12,7 @@ var regions= [
 
 var BroadRegionSummary = [0.00,0.01,0.32,3.28,3.61,5.32,5.43,6.17];
 var BroadRegionPercent = [0.01,0.31,2.97,0.33,1.71,0.11,0.74,0.11];
-var colors = ["red","pink","orange","blue","purple","green","yellow"];
+var colors = ["red","pink","orange","black","purple","green","yellow"];
 
 var textFields = d3.selectAll(".paneltext");
 
@@ -80,10 +80,15 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                   }
 */                }
 
-                visible.style("visibility","visible")
-                       .attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
-                       .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));})
-                       .attr("r",0.4);
+                visible.style("visibility","visible");
+                if(visible.size()==10){
+                  visible.transition().attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
+                       .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));});
+                }
+                else if(visible.size()>=10){
+                  visible.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
+                       .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));});
+                }
               }
 
               //Initialize Zoom Behaviour and Scale Boundaries
