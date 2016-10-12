@@ -1,6 +1,7 @@
 
 svg {
   background-color: white;
+  flow: left;
 /*  overflow:visible;*/
   position:static;
 }
@@ -22,8 +23,8 @@ circle {
   color: blue;
 }
 #viewbox {
-  width:350px;
-  height:350px;
+  width:600px;
+  height:600px;
   position: static;
   float: left;
   background: green;

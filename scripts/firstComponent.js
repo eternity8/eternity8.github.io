@@ -1,62 +1,120 @@
 
-width = 1000;
-height = 1000;
-minYear = 1800;
-var mySVG = d3.select("#zoomBox").attr("width",width)
-                .attr("height",height);
+var minYear = 1514;
+var maxYear = 1866;
+var mySVG = d3.select("#zoomBox");
+var width = mySVG.attr("width");
+var height = mySVG.attr("height");
+var viewradius = width/2 -20;
+
+var regions= [
+  {region: "Europe",radianPercent: 0.01,radianMin: 0.00,color: "red"}
+];
+
+var BroadRegionSummary = [0.00,0.01,0.32,3.28,3.61,5.32,5.43,6.17];
+var BroadRegionPercent = [0.01,0.31,2.97,0.33,1.71,0.11,0.74,0.11];
+var colors = ["red","pink","orange","blue","purple","green","yellow"];
 
 var textFields = d3.selectAll(".paneltext");
 
+
 d3.csv("http://localhost/data/slavedata3.csv", function(myData){
-              //Display something to console
+  d3.csv("http://localhost/data/regions.csv", function(dRegions){
+
+              //Test: display something to console
               console.log(myData[0]);
 
-              //Functions for defining data point positions
+              //Data Point Radius Function
               function makeRadius(year){
-                return (year-minYear)/352 * width/2;
+                return (year-minYear)/(maxYear-minYear) * viewradius;
               }
 
-              function makeTheta(i){
-                return i;
+              //Angle Funcitons
+              function makeTheta(d){
+                return d.rand*BroadRegionPercent[d.landingRegion]+BroadRegionSummary[d.landingRegion];
               }
-              //Functions for applying zoom
+              function makeTheta2(d){
+                return d.rand*6.28;
+              }
+
+              function updateTheta(d){
+                return d.rand*(dRegions[d.landingRegion].percentRadians)+dRegions[d.landingRegion].minRadians;
+              }
+
+              //Zoom Update Function
               function myZoomHandler(){
+
+                //get scaleFactor generated from zoom event
                 scaleFactor = (d3.event.transform.k);
+
+                //Apply scaleFactor to circles
                 group.attr("transform", "translate(" + width/2 +", " + height/2 +") scale("+d3.event.transform.k+ ")");
+
+                //Update visibility
                 circles.style("visibility","hidden");
-                visible = circles.filter(function(d,i){var radius = makeRadius(d.yearam);
-                                                      //      if(i===4){console.log(makeRadius(d.yearam)+ " " + width/2 + " " + radius*scaleFactor);};
-                                                        return radius*scaleFactor<(width/2)-20;});
-                visible.style("visibility","visible");
+                visible = circles.filter(function(d,i){return makeRadius(d.yearam)*scaleFactor<viewradius;});
+
+
+                //Update text panel figures
                 var year = d3.max(visible.data(),function(d){return +d.yearam;});
                 var numVoyages = visible.size();
                 var embarked = d3.sum(visible.data(),function(d){return +d.embarked;});
                 var died = d3.sum(visible.data(),function(d){return +d.embarked - +d.disembarked;})
                 textdata = [year, numVoyages,embarked,died];
                 textFields.data(textdata).text(function(d){return d;});
+                function getPercent(data){
+                  return(+d.region);
+                }
+                //Update angle by region
+                var temp =0;
+                for(i=0;i<8;i++){
+                  var newpercent = (function(){return (visible.filter(function(d){
+                    return d.landingRegion==i;}).size())/(visible.size());})();
 
+                  dRegions[i].percentVisible =newpercent;
+                  dRegions[i].percentRadians =newpercent*6.28;
+                  dRegions[i].minRadians = temp;
+                  temp+= newpercent*6.28;
+/*                  if(i==2)
+                  {
+                    console.log(dRegions[i]);
+                  }
+*/                }
 
+                visible.style("visibility","visible")
+                       .attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
+                       .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));})
+                       .attr("r",0.4);
               }
-              //define zoom behaviour and scale Extent
-              var zoom = d3.zoom().scaleExtent([1,400]).on("zoom",myZoomHandler);
 
+              //Initialize Zoom Behaviour and Scale Boundaries
+              var zoom = d3.zoom().scaleExtent([1,400]).on("zoom",myZoomHandler);
               mySVG.call(zoom);
 
-              var group = mySVG.append("g").attr("id","cgroup").attr("transform",function(){return "translate(" + width/2 + ", " + height/2+") scale( " +400+ ")"});
-              var circles = group.selectAll("circle").data(myData).enter().filter(function(d){return +d.yearam>minYear;}).append("circle");
-              mySVG.call(zoom.transform, d3.zoomIdentity.scale(400));
+              //Create Circles
+              var group = mySVG.append("g")
+                                .attr("id","cgroup")
+                                .attr("transform",function(){return "translate(" + width/2 + ", " + height/2+") scale( " +400+ ")"});
+
+              var circles = group.selectAll("circle").data(myData).enter().append("circle");
+
+              //Define Starting Attributes for all Circles
+              circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta2(d));})
+                     .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta2(d));})
+                     .attr("r",0.4)
+                     .style("fill",function(d){return colors[d.landingRegion];});
+
+              //Display Data for One Circle
+  /*            console.log(circles.filter(function(d,i){
+                return i===3;
+              }).data());
+*/
+              //Define Centre Circle for Reference
               var centreCircle = group.append("circle").attr("cx",0)
                                     .attr("cy",0)
-                                    .attr("r",0.2)
+                                    .attr("r",0.4)
                                     .attr("id","Middle");
 
-              circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta(i));})
-                     .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta(i));})
-                     .attr("r",0.01);
-
-
-  //            function addValToObject(myObject){myObject["newKey"]="Hello";};
-
-  //            circles.data.addValToObject(d);
-
-            });
+              //Initialize Zoom To Maximum Scale (fully zoomed in)
+              mySVG.call(zoom.transform, d3.zoomIdentity.scale(400));
+    });
+});
