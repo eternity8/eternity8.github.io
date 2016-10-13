@@ -18,10 +18,26 @@ circle {
   position:static;
   float: left;
 }
+#updatePanel p {
+  font-size: 24px;
+}
+
+#updatePanel b {
+  font-size: 36px;
+}
+
+#legend {
+  position: static;
+  float: none;
+  width:440px;
+  height:180px;
+  font-size: 24px;
+}
+
 
 .paneltext {
-  color: blue;
 }
+
 #viewbox {
   width:600px;
   height:600px;

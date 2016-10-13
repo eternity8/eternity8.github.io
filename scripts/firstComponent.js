@@ -5,6 +5,10 @@ var mySVG = d3.select("#zoomBox");
 var width = mySVG.attr("width");
 var height = mySVG.attr("height");
 var viewradius = width/2 -20;
+var legendRectWidth = 40;
+var legendRectSpacing = 5;
+var legendPerColumn = 4;
+var legendTextWidth = 320;
 
 var regions= [
   {region: "Europe",radianPercent: 0.01,radianMin: 0.00,color: "red"}
@@ -12,7 +16,7 @@ var regions= [
 
 var BroadRegionSummary = [0.00,0.01,0.32,3.28,3.61,5.32,5.43,6.17];
 var BroadRegionPercent = [0.01,0.31,2.97,0.33,1.71,0.11,0.74,0.11];
-var colors = ["red","pink","orange","black","purple","green","yellow"];
+var colors = ["red","brown","orange","black","purple","green","yellow","gray"];
 
 var textFields = d3.selectAll(".paneltext");
 
@@ -21,7 +25,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
   d3.csv("http://localhost/data/regions.csv", function(dRegions){
 
               //Test: display something to console
-              console.log(myData[0]);
+              console.log("latestversion");
 
               //Data Point Radius Function
               function makeRadius(year){
@@ -102,11 +106,20 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
 
               var circles = group.selectAll("circle").data(myData).enter().append("circle");
 
+              //Create Legend
+              var legendDiv = d3.select("#legend")
+              legendDiv.append("h3").text("Region of Slave Landing").style("text-align","center");
+              legendgroups = legendDiv.append("svg").attr("height",600).attr("width",200).selectAll("g").data(dRegions).enter().append("g")
+              legendgroups.attr("transform",function(d,i){return "translate( " +Math.floor(i/legendPerColumn) *(2*legendRectSpacing+legendRectWidth+legendTextWidth)+", " +(legendRectWidth+legendRectSpacing)*(i%legendPerColumn)+")";});
+              rectangles = legendgroups.append("rect").attr("fill",function(d){return d.color;}).attr("width",legendRectWidth).attr("height",legendRectWidth);
+              legendText = legendgroups.append("text").text(function(d){return d.regionName;}).attr("x",legendRectWidth+legendRectSpacing).attr("y",legendRectWidth-legendRectSpacing);
+              legendDiv.select("svg").attr("height",legendPerColumn*(legendRectWidth+legendRectSpacing)).attr("width",(legendRectWidth+legendTextWidth+legendRectSpacing*2)*2);
+
               //Define Starting Attributes for all Circles
               circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta2(d));})
                      .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta2(d));})
                      .attr("r",0.4)
-                     .style("fill",function(d){return colors[d.landingRegion];});
+                     .style("fill",function(d){return dRegions[d.landingRegion].color;});
 
               //Display Data for One Circle
   /*            console.log(circles.filter(function(d,i){
@@ -114,11 +127,11 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               }).data());
 */
               //Define Centre Circle for Reference
-              var centreCircle = group.append("circle").attr("cx",0)
+/*              var centreCircle = group.append("circle").attr("cx",0)
                                     .attr("cy",0)
                                     .attr("r",0.4)
                                     .attr("id","Middle");
-
+*/
               //Initialize Zoom To Maximum Scale (fully zoomed in)
               mySVG.call(zoom.transform, d3.zoomIdentity.scale(400));
     });
