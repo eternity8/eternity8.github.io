@@ -10,13 +10,8 @@ var legendRectSpacing = 5;
 var legendPerColumn = 4;
 var legendTextWidth = 320;
 
-var regions= [
-  {region: "Europe",radianPercent: 0.01,radianMin: 0.00,color: "red"}
-];
 
-var BroadRegionSummary = [0.00,0.01,0.32,3.28,3.61,5.32,5.43,6.17];
-var BroadRegionPercent = [0.01,0.31,2.97,0.33,1.71,0.11,0.74,0.11];
-var colors = ["red","brown","orange","black","purple","green","yellow","gray"];
+
 
 var textFields = d3.selectAll(".paneltext");
 
