@@ -1,7 +1,7 @@
 
-width = 1000;
-height = 1000;
-minYear = 1800;
+width = 350;
+height = 350;
+minYear = 1514;
 var mySVG = d3.select("#zoomBox").attr("width",width)
                 .attr("height",height);
 
@@ -47,12 +47,12 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               mySVG.call(zoom.transform, d3.zoomIdentity.scale(400));
               var centreCircle = group.append("circle").attr("cx",0)
                                     .attr("cy",0)
-                                    .attr("r",0.2)
+                                    .attr("r",0.4)
                                     .attr("id","Middle");
 
               circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta(i));})
                      .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta(i));})
-                     .attr("r",0.01);
+                     .attr("r",0.4);
 
 
   //            function addValToObject(myObject){myObject["newKey"]="Hello";};
