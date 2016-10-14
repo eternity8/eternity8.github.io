@@ -9,6 +9,8 @@ var legendRectWidth = 40;
 var legendRectSpacing = 5;
 var legendPerColumn = 4;
 var legendTextWidth = 320;
+var opacity = 0.1;
+var pieRadiusPercent = 1.0;
 
 
 
@@ -16,7 +18,7 @@ var legendTextWidth = 320;
 var textFields = d3.selectAll(".paneltext");
 
 
-d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
+d3.csv("http://localhost/data/slavedata3.csv", function(myData){
   d3.csv("http://localhost/data/regions.csv", function(dRegions){
 
               //Test: display something to console
@@ -92,7 +94,7 @@ d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
 
                 }
                 //updateArcs
-                arcs.each(function(d,i){updateArc(this,viewradius/scaleFactor,+dRegions[i].minRadians,+dRegions[i].maxRadians,dRegions[i].color);})
+                arcs.each(function(d,i){updateArc(this,pieRadiusPercent*viewradius/scaleFactor,+dRegions[i].minRadians,+dRegions[i].maxRadians,dRegions[i].color);})
 
 
           /*      if(visible.size()==10){
@@ -118,7 +120,7 @@ d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
 
               //create Arcs
               var arcs = group.selectAll("path").data(dRegions).enter().append("path");
-              arcs.attr("d","M 100 100 L 200 200").style("opacity",0.1);
+              arcs.attr("d","M 100 100 L 200 200").style("opacity",opacity);
               var circles = group.selectAll("circle").data(myData).enter().append("circle");
 
               //Create Legend
