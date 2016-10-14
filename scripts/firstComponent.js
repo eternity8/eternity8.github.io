@@ -74,9 +74,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                 var died = d3.sum(visible.data(),function(d){return +d.embarked - +d.disembarked;})
                 textdata = [year, numVoyages,embarked,died];
                 textFields.data(textdata).text(function(d){return d;});
-                function getPercent(data){
-                  return(+d.region);
-                }
+
                 //Update angle by region
                 var temp =0;
                 for(i=0;i<8;i++){
