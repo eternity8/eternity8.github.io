@@ -16,11 +16,12 @@ var legendTextWidth = 320;
 var textFields = d3.selectAll(".paneltext");
 
 
-d3.csv("http://localhost/data/slavedata3.csv", function(myData){
+d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
   d3.csv("http://localhost/data/regions.csv", function(dRegions){
 
               //Test: display something to console
               console.log("latestversion");
+
 
               //Data Point Radius Function
               function makeRadius(year){
@@ -39,6 +40,17 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                 return d.rand*(dRegions[d.landingRegion].percentRadians)+dRegions[d.landingRegion].minRadians;
               }
 
+              //Arc Update Function
+              function updateArc(arc,r,minTheta,maxTheta,color){
+                var flag1 =0;
+                var flag2 = 1;
+                if (maxTheta-minTheta>3.14) { flag1=1; flag2=1;}
+                d3.select(arc).attr("d","M "+0 + " " + 0 + " L "+ r*Math.cos(minTheta)+" "+r*Math.sin(minTheta)
+                              +" A "+ r + " " + r + " "+ 0+ " " +flag1+" "+flag2+" "+r*Math.cos(maxTheta) + " "+r*Math.sin(maxTheta)
+                              +" z")
+                              .attr("fill",color);
+
+              }
               //Zoom Update Function
               function myZoomHandler(){
 
@@ -73,18 +85,21 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                   dRegions[i].percentRadians =newpercent*6.28;
                   dRegions[i].minRadians = temp;
                   temp+= newpercent*6.28;
-/*                  if(i==2)
-                  {
-                    console.log(dRegions[i]);
-                  }
-*/                }
+                  dRegions[i].maxRadians=temp;
 
 
-                if(visible.size()==10){
+
+
+                }
+                //updateArcs
+                arcs.each(function(d,i){updateArc(this,viewradius/scaleFactor,+dRegions[i].minRadians,+dRegions[i].maxRadians,dRegions[i].color);})
+
+
+          /*      if(visible.size()==10){
                   visible.transition().attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
                        .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));});
-                }
-                else if(visible.size()>=10){
+                }*/
+                if(visible.size()>=0){
                   visible.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
                        .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));});
 
@@ -103,7 +118,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
 
               //create Arcs
               var arcs = group.selectAll("path").data(dRegions).enter().append("path");
-              arcs.attr("d","M "+width/2 + " "+width/2 + " A " + 100 + " " + 100 + ", " + 0 + ", "+0+", "+0+", " + 5 + " "+ 500);
+              arcs.attr("d","M 100 100 L 200 200").style("opacity",0.1);
               var circles = group.selectAll("circle").data(myData).enter().append("circle");
 
               //Create Legend
