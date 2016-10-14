@@ -29,7 +29,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
 
               //Angle Funcitons
               function makeTheta(d){
-                return d.rand*BroadRegionPercent[d.landingRegion]+BroadRegionSummary[d.landingRegion];
+                return d.rand*(dRegions[d.landingRegion].percentRadians) +dRegions[d.landingRegion].minRadians;
               }
               function makeTheta2(d){
                 return d.rand*6.28;
@@ -79,7 +79,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                   }
 */                }
 
-                visible.style("visibility","visible");
+
                 if(visible.size()==10){
                   visible.transition().attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
                        .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));});
@@ -87,18 +87,23 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                 else if(visible.size()>=10){
                   visible.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
                        .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));});
+
                 }
+                visible.style("visibility","visible");
               }
 
               //Initialize Zoom Behaviour and Scale Boundaries
               var zoom = d3.zoom().scaleExtent([1,400]).on("zoom",myZoomHandler);
               mySVG.call(zoom);
 
-              //Create Circles
+              //Create <g> for circles
               var group = mySVG.append("g")
                                 .attr("id","cgroup")
                                 .attr("transform",function(){return "translate(" + width/2 + ", " + height/2+") scale( " +400+ ")"});
 
+              //create Arcs
+              var arcs = group.selectAll("path").data(dRegions).enter().append("path");
+              arcs.attr("d","M "+width/2 + " "+width/2 + " A " + 100 + " " + 100 + ", " + 0 + ", "+0+", "+0+", " + 5 + " "+ 500);
               var circles = group.selectAll("circle").data(myData).enter().append("circle");
 
               //Create Legend
