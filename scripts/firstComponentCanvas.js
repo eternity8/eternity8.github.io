@@ -1,9 +1,14 @@
-
+var width = 600;
+var height = 600;
 var minYear = 1514;
 var maxYear = 1866;
-var mySVG = d3.select("#zoomBox");
-var width = mySVG.attr("width");
-var height = mySVG.attr("height");
+var myFrag = document.createDocumentFragment();
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+var mySVG = d3.select(myFrag).append("svg")
+              .attr("width",width)
+              .attr("height",height);
+var scaleFactor = 400;
 var viewradius = width/2 -20;
 var circleSize = 0.002*viewradius
 var legendRectWidth = 40;
@@ -13,9 +18,6 @@ var legendTextWidth = 320;
 var opacity = 0.2;
 var pieRadiusPercent = 1.0;
 
-
-
-
 var textFields = d3.selectAll(".paneltext");
 
 
@@ -23,7 +25,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
   d3.csv("http://localhost/data/regions.csv", function(dRegions){
 
               //Test: display something to console
-              console.log("latestversion");
+              console.log("Canvas Version");
 
               //Rounding function
               function roundFloat(inFloat,decimals=2){
@@ -59,12 +61,16 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
 
               }
               //Zoom Update Function
-              function myZoomHandler(){
+              function myZoomHandler(event){
 
                 //get scaleFactor generated from zoom event
-                scaleFactor = (d3.event.transform.k);
+                if(event.deltaY>0){
+                  scaleFactor*=1.1;
+                }
+                else{
+                  scaleFactor*=(10/11);
+                }
                 scaleFactor2 = scaleFactor;
-                console.log(scaleFactor);
 
                 //Apply scaleFactor to circles
                 group.attr("transform", "translate(" + width/2 +", " + height/2 +") scale("+scaleFactor2+ ")");
@@ -106,13 +112,31 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                   visible.transition().attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
                        .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));});
                 }*/
-                if(visible.size()>=0){
-                  visible.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(updateTheta(d));})
-                       .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(updateTheta(d));});
 
-                }
-                visible.style("visibility","visible");
+                ctx.clearRect(0,0,width,height);
+                ctx.save();
+                ctx.translate(300,300);
+                var r, theta, x, y, color;
+                visible.each(function(d){
+                  r = makeRadius(d.yearam);
+                  theta = updateTheta(d);
+                  x = r*Math.cos(theta);
+                  y = r*Math.sin(theta);
+                  color = dRegions[d.landingRegion].color;
+                  me = d3.select(this);
+                  ctx.beginPath();
+                  ctx.fillStyle=color;
+                  ctx.arc(x,y,circleSize,0,Math.PI*2,1);
+                  ctx.fill();
+                });
+                ctx.restore();
               }
+
+
+
+
+
+
 
               //Initialize Zoom Behaviour and Scale Boundaries
               var zoom = d3.zoom().scaleExtent([1,400]).on("zoom",myZoomHandler);
@@ -155,6 +179,6 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                                     .attr("id","Middle");
 */
               //Initialize Zoom To Maximum Scale (fully zoomed in)
-              mySVG.call(zoom.transform, d3.zoomIdentity.scale(400));
+              myCanvas.addEventListener("wheel",myZoomHandler);
     });
 });
