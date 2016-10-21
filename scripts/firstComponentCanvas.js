@@ -83,7 +83,7 @@ d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
                 }
                 scaleFactor2 = scaleFactor;
                 function isVisible(d,i){return makeRadius(d.yearam)*scaleFactor2<viewradius;}
-                visible = circles.filter(function(){return isVisible(d,i);});
+                visible = circles.filter(function(d,i){return isVisible(d,i);});
 
 
                 //Update text panel figures
