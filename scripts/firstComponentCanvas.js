@@ -2,13 +2,10 @@ var width = 600;
 var height = 600;
 var minYear = 1514;
 var maxYear = 1866;
-var myFrag = document.createDocumentFragment();
 var myCanvas = document.getElementById("myCanvas");
 var ctx = myCanvas.getContext("2d");
-var mySVG = d3.select(myFrag).append("svg")
-              .attr("width",width)
-              .attr("height",height);
 var scaleFactor = 400;
+
 var viewradius = width/2 -20;
 var circleSize = 0.002*viewradius
 var legendRectWidth = 40;
@@ -21,11 +18,49 @@ var pieRadiusPercent = 1.0;
 var textFields = d3.selectAll(".paneltext");
 
 
-d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
+d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
   d3.csv("http://localhost/data/regions.csv", function(dRegions){
 
               //Test: display something to console
               console.log("Canvas Version");
+
+              //pseudo-globals
+              var totalVoyages = Voyages.length;
+              var scaledYear = 1514;
+
+              var visible = {
+                  index: 0,
+                  embarked:224,
+                  disembarked:166,
+                  total: 1,
+                  year: 1514,
+                  regionCount = [0,0,0,0,0,0,0,0]
+              };
+
+              var lastVisible = {
+                  index: 0,
+                  embarked:224,
+                  disembarked:166,
+                  total: 1,
+                  year: 1514,
+                  regionCount = [0,0,0,0,0,0,0,0]
+              };
+
+              //Initial Data Preparation
+              //Assumes that stated variables are present (yearam,embarked,etc.)
+              //Later assumes csv rows are sorted by year (ascending)
+
+              for (i=0;i<totalVoyages;i++){
+                current = Voyages[i];
+                current.yearam = +current.yearam;
+                current.embarked = +current.embarked;
+                current.disembarked = +current.disembarked;
+                current.rand = +current.rand;
+                current.landingRegion = +current.landingRegion;
+                current.baseRadius = +current.baseRadius;
+                current.x=0;
+                current.y=0;
+              }
 
               //Rounding function
               function roundFloat(inFloat,decimals=2){
@@ -82,25 +117,53 @@ d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
                   scaleFactor*=(10/11);
                 }
                 scaleFactor2 = scaleFactor;
-                function isVisible(d,i){return makeRadius(d.yearam)*scaleFactor2<viewradius;}
-                visible = circles.filter(function(d,i){return isVisible(d,i);});
+
+                //Function to update the Years in view
+                scaledYear+=1;
+
+
+                //Store current visible in lastVisible
+                var currentIndex = visible.index;
+
+                lastVisible.index = currentIndex;
+                lastVisible.total = visible.total;
+                lastVisible.year = visible.year;
+                lastVisible.embarked = visible.embarked;
+                lastVisible.disembarked = visible.disembarked;
+
+                //Update visible region
+                var numAdded=0;
+                var newEmbarked
+                while ( (Voyages[currentIndex].yearam) <= scaledYear ){
+                    currentVoyage = Voyages[currentIndex];
+                    newEmbarked += currentVoyage.embarked;
+                    newDisembarked += currentVoyage.disembarked;
+                    visible.regionCount[currentVoyage.region]++;
+                    currentIndex++;
+                    numAdded++;
+
+                }
+
+                visible.index=currentIndex;
+                visible.numVisible += numAdded;
+                visible.year=scaledYear;
+                visible.embarked += newEmbarked;
+                visible.disembarked += newDisembarked;
 
 
                 //Update text panel figures
-                var year = d3.max(visible.data(),function(d){return +d.yearam;});
-                var numVoyages = visible.size();
-                var embarked = d3.sum(visible.data(),function(d){return +d.embarked;});
-                var died = d3.sum(visible.data(),function(d){return +d.embarked - +d.disembarked;})
-                textdata = [year, numVoyages,embarked,died];
+                var numVoyages = visible.numVisible;
+                var embarked = visible.embarked;
+                var died = visible.embarked-visible.disembarked;
+                textdata = [scaledYear, numVoyages,embarked,died];
                 textFields.data(textdata).text(function(d){return d;});
 
                 //Update angle by region
                 var temp =0;
                 for(i=0;i<8;i++){
-                  var newpercent = (function(){return (visible.filter(function(d){
-                    return d.landingRegion==i;}).size())/(visible.size());})();
 
-                  dRegions[i].percentVisible =newpercent;
+
+                  dRegions[i].percentVisible =visible.;
                   dRegions[i].percentRadians =newpercent*6.28;
                   dRegions[i].minRadians = temp;
                   temp+= newpercent*6.28;
@@ -139,38 +202,21 @@ d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
               }
 
 
-
-              //Create <g> for circles
-              var group = mySVG.append("g")
-                                .attr("id","cgroup")
-
               //create Arcs
               var arcs = group.selectAll("path").data(dRegions).enter().append("path");
               arcs.attr("d","M 100 100 L 200 200").style("opacity",opacity);
-              var circles = group.selectAll("circle").data(myData).enter().append("circle");
+
 
               //Create Legend
               createLegend();
 
 
               //Define Starting Attributes for all Circles
-              circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta2(d));})
-                     .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta2(d));})
-                     .attr("r",circleSize)
-                     .style("fill",function(d){return dRegions[d.landingRegion].color;});
+              circles("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta2(d));})
+                     ("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta2(d));})
+                     ("r",circleSize)
+                     color: dRegions[d.landingRegion].color;});
 
-              //Display Data for One Circle
-  /*            console.log(circles.filter(function(d,i){
-                return i===3;
-              }).data());
-*/
-              //Define Centre Circle for Reference
-/*              var centreCircle = group.append("circle").attr("cx",0)
-                                    .attr("cy",0)
-                                    .attr("r",0.4)
-                                    .attr("id","Middle");
-*/
-              //Initialize Zoom To Maximum Scale (fully zoomed in)
               myCanvas.addEventListener("wheel",myZoomHandler);
     });
 });
