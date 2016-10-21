@@ -7,13 +7,16 @@ var viewradius = canvasWidth/2 - 20;
 
 //Zoom Interactive Defaults
 var circleSize = 0.002*viewradius
-var startScale=400;
+var startScale=1;
 var maxScale=400;
 var minScale=1;
 
 //Pie Chart Defaults
 var opacity = 0.2;
 var pieRadiusPercent = 1.0;
+
+//Math Constants
+var twoPi = Math.PI*2;
 
 //Voyage Year Range
 var minYear = 1514;
@@ -30,7 +33,9 @@ var legendRectSpacing = 5;
 var legendPerColumn = 4;
 var legendTextWidth = 320;
 
+//EssentialSlaveData variables: yearam, embarked, disembarked, rand, landingRegion, baseRadius
 d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
+  //Regions variables: regionName, percentVisible, percentRadians, minRadians, maxRadians, color
   d3.csv("http://localhost/data/regions.csv", function(dRegions){
 
     console.log("Canvas Re-Write!");
@@ -45,7 +50,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       disembarked: 166,
       total: 1,
       year: 1514,
-      regionCount: [0,0,0,0,0,0,0,0]
+      regionCount: [1,0,0,0,0,0,0,0]
     };
     //lastVisible - Stores history of last visible selection
     var lastVisible = {
@@ -64,7 +69,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       zoomout: false, //1 zoom-out, -1 zoom-in
       newEmbarked: 0,
       newDisembarked: 0,
-      newAdded: 0
+      newAdded: 0,
+      scrolls:0
     };
 
     //---one-time-functions---
@@ -124,9 +130,12 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     function updateYear(){
       if (current.zoomout){
         current.year++;
+        current.scrolls++;
       } else {
         current.year--;
+        current.scrolls--;
       }
+      console.log(current.scrolls);
     }
     //Saves current visible data in lastVisible
     function storeLastVisible(){
@@ -137,7 +146,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       lastVisible.disembarked = visible.disembarked;
     }
     function updateVisible(){
-
+      //Note: assumes that year changes by at least one with each zoom update
       var currentIndex = visible.index;
       var scaledYear = current.year;
       var voyage;
@@ -145,23 +154,29 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       current.newEmbarked = 0;
       current.newDisembarked = 0;
       if (current.zoomout){
-        while(Voyages[currentIndex].yearam<scaledYear){
+        while(currentIndex<totalVoyages-1){
+          currentIndex++;
           voyage = Voyages[currentIndex];
+          if(voyage.yearam>scaledYear){
+            break;
+          }
           current.newEmbarked += voyage.embarked;
           current.newDisembarked += voyage.disembarked;
           current.newAdded++;
-          visible.regionCount[voyage.region]++;
-          currentIndex++;
+          visible.regionCount[voyage.landingRegion]++;
+
         }
+        currentIndex--;
       } else {
-        while(Voyages[currentIndex].yearam>scaledYear){
+        while((currentIndex>0) && (Voyages[currentIndex].yearam>=scaledYear) ){
           voyage = Voyages[currentIndex];
           current.newEmbarked -= voyage.embarked;
           current.newDisembarked -= voyage.disembarked;
           current.newAdded--;
-          visible.regionCount[voyage.region]--;
+          visible.regionCount[voyage.landingRegion]--;
           currentIndex--;
         }
+        currentIndex++;
       }
 
       //Note: current values could be negative
@@ -178,9 +193,36 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       textFields.data(textdata).text(function(d){return d;});
 
     }
+    function updateRegions(){
 
+      var thetaRange;
+      var tempMinTheta=0;
+  //    console.log("start "+ visible.regionCount);
+      for(i = 0;i<8;i++)
+      {
+  //      console.log("Before " + dRegions[i].minRadians,dRegions[i].percentRadians);
+        dRegions[i].minRadians = tempMinTheta;
+        thetaRange = twoPi *visible.regionCount[i]/visible.total;
+        dRegions[i].percentRadians = thetaRange;
+        tempMinTheta += thetaRange;
+  //      console.log("After " + dRegions[i].minRadians,dRegions[i].percentRadians);
+      }
+    }
     function updateCirclePositions(){
-
+        var total = visible.index;
+        var x, y, theta, r, color, regionID;
+        for (i=0;i<total;i++){
+          regionID = Voyages[i].landingRegion;
+          r = Voyages[i].baseRadius*current.scaleFactor;
+          theta = Voyages[i].rand * dRegions[regionID].percentRadians + dRegions[regionID].minTheta;
+          x = r*Math.cos(theta);
+          y = r*Math.sin(theta);
+    //      console.log(x+ " " + y + " " + r + " " + theta + " " + regionID + dRegions[regionID].minTheta);
+          ctx.beginPath()
+          ctx.fillStyle = dRegions[regionID].color;
+          ctx.arc(x,y,10,0,twoPi,1);
+          ctx.fill();
+        }
     }
     function drawCircles(){
 
@@ -208,6 +250,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       storeLastVisible();
       updateVisible();
       updateTextPanel();
+      updateRegions();
       updateCirclePositions();
       drawCircles();
 
