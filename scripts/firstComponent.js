@@ -5,12 +5,11 @@ var mySVG = d3.select("#zoomBox");
 var width = mySVG.attr("width");
 var height = mySVG.attr("height");
 var viewradius = width/2 -20;
-var circleSize = 0.002*viewradius
 var legendRectWidth = 40;
 var legendRectSpacing = 5;
 var legendPerColumn = 4;
 var legendTextWidth = 320;
-var opacity = 0.2;
+var opacity = 0.1;
 var pieRadiusPercent = 1.0;
 
 
@@ -25,26 +24,22 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               //Test: display something to console
               console.log("latestversion");
 
-              //Rounding function
-              function roundFloat(inFloat,decimals=2){
-                return +inFloat.toFixed(decimals);
-              }
 
               //Data Point Radius Function
               function makeRadius(year){
-                return (roundFloat((year-minYear)/(maxYear-minYear) * viewradius));
+                return (year-minYear)/(maxYear-minYear) * viewradius;
               }
 
               //Angle Funcitons
               function makeTheta(d){
-                return roundFloat(d.rand*(dRegions[d.landingRegion].percentRadians) +dRegions[d.landingRegion].minRadians);
+                return d.rand*(dRegions[d.landingRegion].percentRadians) +dRegions[d.landingRegion].minRadians;
               }
               function makeTheta2(d){
-                return roundFloat(d.rand*6.28);
+                return d.rand*6.28;
               }
 
               function updateTheta(d){
-                return (roundFloat((d.rand*(dRegions[d.landingRegion].percentRadians)+dRegions[d.landingRegion].minRadians),4));
+                return d.rand*(dRegions[d.landingRegion].percentRadians)+dRegions[d.landingRegion].minRadians;
               }
 
               //Arc Update Function
@@ -52,9 +47,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                 var flag1 =0;
                 var flag2 = 1;
                 if (maxTheta-minTheta>3.14) { flag1=1; flag2=1;}
-                d3.select(arc).attr("d","M "+0 + " " + 0 + " L "+ r*Math.cos(minTheta)+" "+r*Math.sin(minTheta)
-                              +" A "+ r + " " + r + " "+ 0+ " " +flag1+" "+flag2+" "+r*Math.cos(maxTheta) + " "+r*Math.sin(maxTheta)
-                              +" z")
+                d3.select(arc).attr("d","M "+0 + " " + 0 + " L "+ r*Math.cos(minTheta)+" "+r*Math.sin(minTheta)+" A "+ r + " " + r + " "+ 0+ " " +flag1+" "+flag2+" "+r*Math.cos(maxTheta) + " "+r*Math.sin(maxTheta)+" z")
                               .attr("fill",color);
 
               }
@@ -63,22 +56,20 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
 
                 //get scaleFactor generated from zoom event
                 scaleFactor = (d3.event.transform.k);
-                scaleFactor2 = scaleFactor;
-                console.log(scaleFactor);
 
                 //Apply scaleFactor to circles
-                group.attr("transform", "translate(" + width/2 +", " + height/2 +") scale("+scaleFactor2+ ")");
+                group.attr("transform", "translate(" + width/2 +", " + height/2 +") scale("+d3.event.transform.k+ ")");
 
                 //Update visibility
                 circles.style("visibility","hidden");
-                visible = circles.filter(function(d,i){return makeRadius(d.yearam)*scaleFactor2<viewradius;});
+                visible = circles.filter(function(d,i){return makeRadius(d.yearam)*scaleFactor<viewradius;});
 
 
                 //Update text panel figures
                 var year = d3.max(visible.data(),function(d){return +d.yearam;});
                 var numVoyages = visible.size();
                 var embarked = d3.sum(visible.data(),function(d){return +d.embarked;});
-                var died = d3.sum(visible.data(),function(d){return +d.embarked - +d.disembarked;})
+                var died = d3.sum(visible.data(),function(d){return +d.embarked - +d.disembarked;});
                 textdata = [year, numVoyages,embarked,died];
                 textFields.data(textdata).text(function(d){return d;});
 
@@ -99,7 +90,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
 
                 }
                 //updateArcs
-                arcs.each(function(d,i){updateArc(this,pieRadiusPercent*viewradius/scaleFactor2,+dRegions[i].minRadians,+dRegions[i].maxRadians,dRegions[i].color);})
+                arcs.each(function(d,i){updateArc(this,pieRadiusPercent*viewradius/scaleFactor,+dRegions[i].minRadians,+dRegions[i].maxRadians,dRegions[i].color);});
 
 
           /*      if(visible.size()==10){
@@ -121,7 +112,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               //Create <g> for circles
               var group = mySVG.append("g")
                                 .attr("id","cgroup")
-                                .attr("transform",function(){return "translate(" + width/2 + ", " + height/2+") scale( " +400+ ")"});
+                                .attr("transform",function(){return "translate(" + width/2 + ", " + height/2+") scale( " +400+ ")";});
 
               //create Arcs
               var arcs = group.selectAll("path").data(dRegions).enter().append("path");
@@ -140,7 +131,7 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               //Define Starting Attributes for all Circles
               circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta2(d));})
                      .attr("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta2(d));})
-                     .attr("r",circleSize)
+                     .attr("r",0.4)
                      .style("fill",function(d){return dRegions[d.landingRegion].color;});
 
               //Display Data for One Circle

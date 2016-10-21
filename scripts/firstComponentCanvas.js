@@ -21,7 +21,7 @@ var pieRadiusPercent = 1.0;
 var textFields = d3.selectAll(".paneltext");
 
 
-d3.csv("http://localhost/data/slavedata3.csv", function(myData){
+d3.csv("http://localhost/data/smallSlaveData.csv", function(myData){
   d3.csv("http://localhost/data/regions.csv", function(dRegions){
 
               //Test: display something to console
@@ -60,24 +60,30 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                               .attr("fill",color);
 
               }
+
+              function createLegend(){
+              var legendDiv = d3.select("#legend")
+              legendDiv.append("h3").text("Region of Slave Landing").style("text-align","center");
+              legendgroups = legendDiv.append("svg").attr("height",600).attr("width",200).selectAll("g").data(dRegions).enter().append("g")
+              legendgroups.attr("transform",function(d,i){return "translate( " +Math.floor(i/legendPerColumn) *(2*legendRectSpacing+legendRectWidth+legendTextWidth)+", " +(legendRectWidth+legendRectSpacing)*(i%legendPerColumn)+")";});
+              rectangles = legendgroups.append("rect").attr("fill",function(d){return d.color;}).attr("width",legendRectWidth).attr("height",legendRectWidth);
+              legendText = legendgroups.append("text").text(function(d){return d.regionName;}).attr("x",legendRectWidth+legendRectSpacing).attr("y",legendRectWidth-legendRectSpacing);
+              legendDiv.select("svg").attr("height",legendPerColumn*(legendRectWidth+legendRectSpacing)).attr("width",(legendRectWidth+legendTextWidth+legendRectSpacing*2)*2);
+            }
+
+
               //Zoom Update Function
               function myZoomHandler(event){
 
                 //get scaleFactor generated from zoom event
                 if(event.deltaY>0){
                   scaleFactor*=1.1;
-                }
-                else{
+                } else{
                   scaleFactor*=(10/11);
                 }
                 scaleFactor2 = scaleFactor;
-
-                //Apply scaleFactor to circles
-                group.attr("transform", "translate(" + width/2 +", " + height/2 +") scale("+scaleFactor2+ ")");
-
-                //Update visibility
-                circles.style("visibility","hidden");
-                visible = circles.filter(function(d,i){return makeRadius(d.yearam)*scaleFactor2<viewradius;});
+                function isVisible(d,i){return makeRadius(d.yearam)*scaleFactor2<viewradius;}
+                visible = circles.filter(function(){return isVisible(d,i);});
 
 
                 //Update text panel figures
@@ -134,18 +140,9 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
 
 
 
-
-
-
-
-              //Initialize Zoom Behaviour and Scale Boundaries
-              var zoom = d3.zoom().scaleExtent([1,400]).on("zoom",myZoomHandler);
-              mySVG.call(zoom);
-
               //Create <g> for circles
               var group = mySVG.append("g")
                                 .attr("id","cgroup")
-                                .attr("transform",function(){return "translate(" + width/2 + ", " + height/2+") scale( " +400+ ")"});
 
               //create Arcs
               var arcs = group.selectAll("path").data(dRegions).enter().append("path");
@@ -153,13 +150,8 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
               var circles = group.selectAll("circle").data(myData).enter().append("circle");
 
               //Create Legend
-              var legendDiv = d3.select("#legend")
-              legendDiv.append("h3").text("Region of Slave Landing").style("text-align","center");
-              legendgroups = legendDiv.append("svg").attr("height",600).attr("width",200).selectAll("g").data(dRegions).enter().append("g")
-              legendgroups.attr("transform",function(d,i){return "translate( " +Math.floor(i/legendPerColumn) *(2*legendRectSpacing+legendRectWidth+legendTextWidth)+", " +(legendRectWidth+legendRectSpacing)*(i%legendPerColumn)+")";});
-              rectangles = legendgroups.append("rect").attr("fill",function(d){return d.color;}).attr("width",legendRectWidth).attr("height",legendRectWidth);
-              legendText = legendgroups.append("text").text(function(d){return d.regionName;}).attr("x",legendRectWidth+legendRectSpacing).attr("y",legendRectWidth-legendRectSpacing);
-              legendDiv.select("svg").attr("height",legendPerColumn*(legendRectWidth+legendRectSpacing)).attr("width",(legendRectWidth+legendTextWidth+legendRectSpacing*2)*2);
+              createLegend();
+
 
               //Define Starting Attributes for all Circles
               circles.attr("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta2(d));})
