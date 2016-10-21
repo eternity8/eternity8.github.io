@@ -27,29 +27,27 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
               //pseudo-globals
               var totalVoyages = Voyages.length;
               var scaledYear = 1514;
-
+              //Objects
               var visible = {
                   index: 0,
                   embarked:224,
                   disembarked:166,
                   total: 1,
                   year: 1514,
-                  regionCount = [0,0,0,0,0,0,0,0]
+                  regionCount: [0,0,0,0,0,0,0,0]
               };
-
               var lastVisible = {
                   index: 0,
                   embarked:224,
                   disembarked:166,
                   total: 1,
                   year: 1514,
-                  regionCount = [0,0,0,0,0,0,0,0]
+                  regionCount: [0,0,0,0,0,0,0,0]
               };
 
               //Initial Data Preparation
               //Assumes that stated variables are present (yearam,embarked,etc.)
               //Later assumes csv rows are sorted by year (ascending)
-
               for (i=0;i<totalVoyages;i++){
                 current = Voyages[i];
                 current.yearam = +current.yearam;
@@ -77,7 +75,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
                 return roundFloat(d.rand*(dRegions[d.landingRegion].percentRadians) +dRegions[d.landingRegion].minRadians);
               }
               function makeTheta2(d){
-                return roundFloat(d.rand*6.28);
+                return roundFloat(d.rand*Math.PI*2);
               }
 
               function updateTheta(d){
@@ -104,7 +102,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
               rectangles = legendgroups.append("rect").attr("fill",function(d){return d.color;}).attr("width",legendRectWidth).attr("height",legendRectWidth);
               legendText = legendgroups.append("text").text(function(d){return d.regionName;}).attr("x",legendRectWidth+legendRectSpacing).attr("y",legendRectWidth-legendRectSpacing);
               legendDiv.select("svg").attr("height",legendPerColumn*(legendRectWidth+legendRectSpacing)).attr("width",(legendRectWidth+legendTextWidth+legendRectSpacing*2)*2);
-            }
+            ``}
 
 
               //Zoom Update Function
@@ -133,7 +131,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
 
                 //Update visible region
                 var numAdded=0;
-                var newEmbarked
+                var newEmbarked=0;
+                var newDisembarked=0;
                 while ( (Voyages[currentIndex].yearam) <= scaledYear ){
                     currentVoyage = Voyages[currentIndex];
                     newEmbarked += currentVoyage.embarked;
@@ -141,7 +140,6 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
                     visible.regionCount[currentVoyage.region]++;
                     currentIndex++;
                     numAdded++;
-
                 }
 
                 visible.index=currentIndex;
@@ -160,21 +158,17 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
 
                 //Update angle by region
                 var temp =0;
+                var newpercent = 0;
                 for(i=0;i<8;i++){
-
-
-                  dRegions[i].percentVisible =visible.;
+                  newpercent =visible.regionCount[i]/visible.total
+                  dRegions[i].percentVisible = newpercent;
                   dRegions[i].percentRadians =newpercent*6.28;
                   dRegions[i].minRadians = temp;
                   temp+= newpercent*6.28;
                   dRegions[i].maxRadians=temp;
-
-
-
-
                 }
                 //updateArcs
-                arcs.each(function(d,i){updateArc(this,pieRadiusPercent*viewradius/scaleFactor2,+dRegions[i].minRadians,+dRegions[i].maxRadians,dRegions[i].color);})
+//                arcs.each(function(d,i){updateArc(this,pieRadiusPercent*viewradius/scaleFactor2,+dRegions[i].minRadians,+dRegions[i].maxRadians,dRegions[i].color);})
 
 
           /*      if(visible.size()==10){
@@ -186,8 +180,10 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
                 ctx.save();
                 ctx.translate(300,300);
                 var r, theta, x, y, color;
-                visible.each(function(d){
-                  r = makeRadius(d.yearam);
+                var total = visible.total;
+                for(i=0;i<total;i++) {
+                  d = Voyages[i];
+                  r = d.baseRadius*viewradius;
                   theta = updateTheta(d);
                   x = r*Math.cos(theta);
                   y = r*Math.sin(theta);
@@ -197,26 +193,26 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
                   ctx.fillStyle=color;
                   ctx.arc(x,y,circleSize,0,Math.PI*2,1);
                   ctx.fill();
-                });
+                }
                 ctx.restore();
               }
 
 
               //create Arcs
-              var arcs = group.selectAll("path").data(dRegions).enter().append("path");
+/*              var arcs = group.selectAll("path").data(dRegions).enter().append("path");
               arcs.attr("d","M 100 100 L 200 200").style("opacity",opacity);
-
+*/
 
               //Create Legend
               createLegend();
 
-
+/*circedefs
               //Define Starting Attributes for all Circles
               circles("cx",function(d,i){return makeRadius(d.yearam)*Math.cos(makeTheta2(d));})
                      ("cy",function(d,i){return makeRadius(d.yearam)*Math.sin(makeTheta2(d));})
                      ("r",circleSize)
                      color: dRegions[d.landingRegion].color;});
-
+*/
               myCanvas.addEventListener("wheel",myZoomHandler);
     });
 });
