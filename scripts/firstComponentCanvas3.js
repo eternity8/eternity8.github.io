@@ -81,7 +81,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     var preferences = {
       //adjust zoom scaling method (true: add/minus years, false: times/divide current year by factor)
       zoomIsLinear: true,
-      zoomSpeed: 1,
+      zoomSpeed: 4,
       //toggles whether scroll speed affects zoom speed
       useDelta: true
     };
@@ -271,6 +271,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         ctx.clearRect(0,0,canvasWidth,canvasHeight);
         ctx.save();
         ctx.translate(canvasWidth/2,canvasHeight/2);
+        ctx.beginPath()
         for (i=0;i<=total;i++){
           regionID = Voyages[i].landingRegion;
           r = Voyages[i].shiftedYear*scale;
@@ -278,11 +279,13 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           x = r*Math.cos(theta);
           y = r*Math.sin(theta);
     //    console.log(x+ " " + y);
-          ctx.beginPath()
-          ctx.fillStyle = dRegions[regionID].color;
+
+//          ctx.fillStyle = dRegions[regionID].color;
+          ctx.moveTo(x,y);
           ctx.arc(x,y,circleSize,0,twoPi,1);
-          ctx.fill();
+
         }
+        ctx.fill();
         ctx.restore();
     }
     function drawCircles(){

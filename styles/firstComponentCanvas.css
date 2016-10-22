@@ -22,10 +22,7 @@
 .paneltext {
 }
 
-#viewbox {
-  width:600px;
-  height:600px;
+canvas {
   position: static;
   float: left;
-  background: green;
 }
