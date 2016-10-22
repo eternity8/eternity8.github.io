@@ -1,17 +1,22 @@
 //Globals
 
-//DOM Elements
+//DOM and D3 Elements
 var canvas = document.getElementById("myCanvas");
+var svgLayer = document.getElementById("svgLayer");
+var svgD3 = d3.select("#svgLayer");
+var groupD3 = svgD3.append("g");
+
 var ctx = canvas.getContext("2d");
 var textFields = d3.selectAll(".paneltext");
+var canvasd3 = d3.select(canvas);
 
 //Canvas Dimensions
 var canvasWidth = 600;
 var canvasHeight = 600;
 var viewradius = canvasWidth/2 - 20;
-d3.select(canvas).attr("width",canvasWidth);
-d3.select(canvas).attr("height",canvasHeight);
-
+canvasd3.attr("width",canvasWidth);
+canvasd3.attr("height",canvasHeight);
+groupD3.attr("transform", "translate("+ canvasWidth/2 + ", " +canvasWidth/2 + " )");
 //Zoom Interactive Defaults
 var circleSize = 0.002*viewradius
 var startScale=2;
@@ -47,6 +52,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     //---pseudo-globals---
     var totalVoyages = Voyages.length;
     var scaledYear = 1514;
+    var arcsD3=groupD3.selectAll("path").data(dRegions).enter().append("path");
     //Visible Objects - Stores information about current visible selection
     var visible = {
       index: 0,
@@ -83,7 +89,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       zoomIsLinear: true,
       zoomSpeed: 4,
       //toggles whether scroll speed affects zoom speed
-      useDelta: true
+      useDelta: true,
+      showArcs: true
     };
 
     //---one-time-functions---
@@ -100,8 +107,16 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         currentV.landingRegion = +currentV.landingRegion;
         currentV.baseRadius = +currentV.baseRadius; //1514=0,1866=1, scaled
         currentV.shiftedYear = +currentV.shiftedYear;
-        currentV.x=0;
+        currentV.x=0; //currently redundant (x and y not stored)
         currentV.y=0;
+      }
+      for (i=0;i<dRegions.length;i++)
+      {
+        currentR = dRegions[i];
+        currentR.percentVisible = +currentR.percentVisible;
+        currentR.percentRadians = +currentR.percentRadians;
+        currentR.minRadians= +currentR.minRadians;
+        currentR.maxRadians= +currentR.maxRadians;
       }
     })();
 
@@ -115,6 +130,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     legendText = legendgroups.append("text").text(function(d){return d.regionName;}).attr("x",legendRectWidth+legendRectSpacing).attr("y",legendRectWidth-legendRectSpacing);
     legendDiv.select("svg").attr("height",legendPerColumn*(legendRectWidth+legendRectSpacing)).attr("width",(legendRectWidth+legendTextWidth+legendRectSpacing*2)*2);
   ``})();
+
 
 
     //makeRadius and makeTheta only used in initial data setup
@@ -155,13 +171,16 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           yearStep += (
             Math.abs(deltaY/50));
         }
+        if (yearStep>100){
+          yearStep=100;
+        }
         if (!current.zoomout){
           yearStep *= (-1)
         }
         current.year+=yearStep;
       }
       else {
-        //Case: zooming by ratio (50%, 100% zoom etc.)
+        //Case: zooming by ratio (50%, 100% zoom etc.) Not using at this point
         var yearFactor = current.scaleFactor;
         if (!current.zoomout){
           yearFactor = -1/yearFactor;
@@ -258,11 +277,38 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         thetaRange = twoPi *visible.regionCount[i]/visible.total;
         dRegions[i].percentRadians = thetaRange;
         tempMinTheta += thetaRange;
+        dRegions[i].maxRadians = tempMinTheta;
+
   //      console.log("After " + dRegions[i].minRadians,dRegions[i].percentRadians);
       }
     }
+    //drawArc: Redraws a pie chart arc (called from updateArcs)
+    function drawArc(arc,r,minTheta,maxTheta){
+      var flag1 =0;
+      var flag2 = 1;
+      var x1 = r*Math.cos(minTheta);
+      var y1 = r*Math.sin(minTheta);
+      var x2 = r*Math.cos(maxTheta);
+      var y2 = r*Math.sin(maxTheta);
+
+      if(maxTheta-minTheta>Math.PI) {
+        flag1=1;
+      }
+      d3.select(arc).attr("d","M 0 0 L " + x1 + " " + y1 + " A " + r + " " + r + " " + 0 + " " + flag1 + " " + flag2 + " " + x2 + " " + y2 + " z");
+    }
+
+    (function setupArcs(){
+      arcsD3.attr("fill",function(d){return d.color;})
+            .style("opacity",opacity);
+      arcsD3.on("click",function(d,i){console.log(d.regionName);
+      });
+    })();
+    function updateArcs(){
+    arcsD3.each(function(d,i){drawArc(this,viewradius,d.minRadians,d.maxRadians);});
+    }
+
     function updateCirclePositions(){
-        var total = visible.index;
+        var upperIndex = visible.index;
         var scaleYear = current.year-1513;
         var scale = viewradius/scaleYear;
         circleSize=scale/2;
@@ -271,8 +317,9 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         ctx.clearRect(0,0,canvasWidth,canvasHeight);
         ctx.save();
         ctx.translate(canvasWidth/2,canvasHeight/2);
+
         ctx.beginPath()
-        for (i=0;i<=total;i++){
+        for (i=0;i<=upperIndex;i++){
           regionID = Voyages[i].landingRegion;
           r = Voyages[i].shiftedYear*scale;
           theta = Voyages[i].rand * dRegions[regionID].percentRadians + dRegions[regionID].minRadians;
@@ -301,6 +348,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     //ZOOM HANDLER FUNCTION
     function myZoomHandler(event){
       event.preventDefault();
+      console.log("Zoom Triggered");
 //      console.log(event.deltaY);
       updateDirection(event.deltaY);
 
@@ -321,8 +369,10 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       updateVisible();
       updateTextPanel();
       updateRegions();
-      updateCirclePositions();
-      drawCircles();
+      updateCirclePositions(); //this draws the circles too (best do do it all at once)
+      if(preferences.showArcs){
+        updateArcs();
+      }
 
     }
 
@@ -338,14 +388,22 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       }
       else if (key =="d")
       {
+        if(preferences.zoomSpeed<100)
         preferences.zoomSpeed++;
       }
       console.log(preferences.zoomSpeed);
     }
 
+    //MOUSE CLICK HANDLER
+    function mouseClickHandler(event){
+      svgD3.append("circle").attr("cx",event.clientX).attr("cy",event.clientY-100).attr("r",15).attr("fill","blue");
+    }
+
     updateCirclePositions();
     //Add Zoom Event Listener
-    myCanvas.addEventListener("wheel",myZoomHandler);
+
+    svgLayer.addEventListener("wheel",myZoomHandler);
+    svgLayer.addEventListener("click",mouseClickHandler)
     window.addEventListener("keydown",keyHandler)
   });
 });

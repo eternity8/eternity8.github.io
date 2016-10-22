@@ -47,7 +47,10 @@ d3.csv("http://localhost/data/slavedata3.csv", function(myData){
                 var flag1 =0;
                 var flag2 = 1;
                 if (maxTheta-minTheta>3.14) { flag1=1; flag2=1;}
-                d3.select(arc).attr("d","M "+0 + " " + 0 + " L "+ r*Math.cos(minTheta)+" "+r*Math.sin(minTheta)+" A "+ r + " " + r + " "+ 0+ " " +flag1+" "+flag2+" "+r*Math.cos(maxTheta) + " "+r*Math.sin(maxTheta)+" z")
+                d3.select(arc).attr("d","M "+0 + " " + 0 +
+                                    " L "+ r*Math.cos(minTheta)+" "+r*Math.sin(minTheta)+
+                                    " A "+ r + " " + r + " "+ 0+ " " +flag1+" "+flag2 + " " + r*Math.cos(maxTheta) + " "+r*Math.sin(maxTheta)+
+                                    " z")
                               .attr("fill",color);
 
               }
