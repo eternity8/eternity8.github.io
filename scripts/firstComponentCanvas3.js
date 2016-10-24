@@ -3,6 +3,7 @@
 //DOM and D3 Elements
 var canvas = document.getElementById("myCanvas");
 var svgLayer = document.getElementById("svgLayer");
+var container = svgLayer;
 var svgD3 = d3.select("#svgLayer");
 var groupD3 = svgD3.append("g");
 
@@ -16,7 +17,7 @@ var canvasHeight = 600;
 var viewradius = canvasWidth/2 - 20;
 canvasd3.attr("width",canvasWidth);
 canvasd3.attr("height",canvasHeight);
-groupD3.attr("transform", "translate("+ canvasWidth/2 + ", " +canvasWidth/2 + " )");
+groupD3.attr("transform", "translate("+ canvasWidth/2 + ", " +canvasHeight/2 + " )");
 //Zoom Interactive Defaults
 var circleSize = 0.002*viewradius
 var startScale=2;
@@ -54,6 +55,14 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     var scaledYear = 1514;
     var arcsD3=groupD3.selectAll("path").data(dRegions).enter().append("path");
     //Visible Objects - Stores information about current visible selection
+    var selection = {
+      isDefault: true,
+      subSelected: false,
+      current: "default",
+
+      subLower: 0,
+      subUpper: 0
+    }
     var visible = {
       index: 0,
       embarked: 224,
@@ -82,6 +91,14 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       newDisembarked: 0,
       newAdded: 0,
       scrollCount:0
+    };
+    var eventLog = {
+      mouseDown: 0,
+      dragStart: 0,
+      dragging: 0,
+      startEvent: undefined,
+      endEvent: undefined
+
     };
     //preferences
     var preferences = {
@@ -299,10 +316,14 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
 
     (function setupArcs(){
       arcsD3.attr("fill",function(d){return d.color;})
-            .style("opacity",opacity);
-      arcsD3.on("click",function(d,i){console.log(d.regionName);
-      });
+            .style("fill-opacity",opacity)
+            .style("stroke",function(d){return d.color})
+            .style("stroke-opacity",0)
+            .style("stroke-width",2).attr("class","arc");
+  //    arcsD3.on("click",function(d,i){console.log(d.regionName);
+  //    });
     })();
+
     function updateArcs(){
     arcsD3.each(function(d,i){drawArc(this,viewradius,d.minRadians,d.maxRadians);});
     }
@@ -334,9 +355,6 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         }
         ctx.fill();
         ctx.restore();
-    }
-    function drawCircles(){
-
     }
 
     //---update functions---
@@ -395,15 +413,106 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
 
     //MOUSE CLICK HANDLER
-    function mouseClickHandler(event){
-      svgD3.append("circle").attr("cx",event.clientX).attr("cy",event.clientY-100).attr("r",15).attr("fill","blue");
+    function mouseDownHandler(event){
+      console.log("down");
+      eventLog.mouseDown = true;
+      eventLog.dragging=false;
+      eventLog.startEvent = event;
+  //    console.log(event.target);
+      clickStart();
+//      svgD3.append("circle").attr("cx",event.clientX).attr("cy",event.clientY-100).attr("r",15).attr("fill","blue");
+    }
+    function mouseMoveHandler(event){
+      if(eventLog.mouseDown){
+        eventLog.dragging = true;
+        dragUpdate();
+      }
+      //svgD3.append("circle").attr("cx",event.clientX).attr("cy",event.clientY-100).attr("r",4).attr("fill","purple");
+    }
+    function mouseUpHandler(event){
+      eventLog.mouseDown=false;
+      eventLog.endEvent = event;
+      if(eventLog.dragging){
+        dragEnd();
+        eventLog.dragging=false;
+      }
+      else{
+        clickEnd();
+      }
+      console.log("up");
+    //  svgD3.append("circle").attr("cx",event.clientX).attr("cy",event.clientY-100).attr("r",15).attr("fill","red");
+  //    console.log(event.target);
+
+    }
+    updateCirclePositions();
+
+    function setArcBorder(arc,clear=false){
+      var newOpacity=1;
+      if(clear){
+        newOpacity=0;
+      }
+      d3.select(arc).style("stroke-opacity",newOpacity);
     }
 
-    updateCirclePositions();
-    //Add Zoom Event Listener
+    function clickStart(){
+      eventLog.dragStart=true;
+    }
 
-    svgLayer.addEventListener("wheel",myZoomHandler);
-    svgLayer.addEventListener("click",mouseClickHandler)
-    window.addEventListener("keydown",keyHandler)
+    function clickEnd(){
+      target = eventLog.endEvent.target;
+      //If clicked on arc
+      if(target.tagName="path"){
+        //clicked selected arc - do nothing
+        //clicked unselected arc - change selection
+        if(target!=selection.current){
+          //clear previous selection
+          if(selection.isDefault){
+          selection.isDefault = false;
+          } else{
+            setArcBorder(selection.current,"clear");
+          }
+          //set new selection
+          selection.current=target;
+          setArcBorder(target);
+        }
+      } else{ //clicked on window - clear selection
+        if(!selection.isDefault){
+          selection.isDefault = true;
+          console.log("cleared current selection!")
+        } else{
+          setArcBorder(current,"clear");
+        }
+      }
+    }
+
+    function dragEnd(){
+      console.log("finished dragging!");
+    }
+    function dragUpdate(){
+      if (eventLog.dragStart){
+        console.log("started dragging!");
+        eventLog.dragStart=false;
+      }
+      else{
+        console.log("dragging");
+      }
+    }
+    function setup(){
+      //EVENT LISTENERS
+      //Add Zoom Event Listener
+      svgLayer.addEventListener("wheel",myZoomHandler);
+      //Click and Drag Event Listeners
+
+  //    svgLayer.addEventListener("mousedown",mouseDownHandler);
+      svgLayer.addEventListener("mousemove",mouseMoveHandler);
+//      svgLayer.addEventListener("mousedown",mouseDownHandler);
+//      svgLayer.addEventListener("mouseup",mouseUpHandler);
+      window.addEventListener("mousedown",mouseDownHandler);
+      window.addEventListener("mouseup",mouseUpHandler);
+      window.addEventListener("keydown",keyHandler)
+    }
+
+
+    setup();
   });
 });
