@@ -552,7 +552,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           selection.currentID="#"+ d3.select(target).attr("id");
 
           setArcBorder(target);
-//        clipSubRegion();
+         clipSubRegion();
         }
       } else{ //clicked on window - clear selection
         if(!selection.isDefault){
@@ -593,33 +593,20 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     function drawSubRegion(){
       //note: sub-region clip path is not inside the normal svg <g> translation
       //note: currently drawing temp selection (while dragging), not final selection
-      console.log("Stored: " + selection.tempSubDimensions.tempX1 + " " + selection.tempSubDimensions.tempY1);
-      var x1 = selection.tempSubDimensions.tempX1;
-      var x2 = selection.tempSubDimensions.tempX2;
-      var y1 = selection.tempSubDimensions.tempY1;
-      var y2 = selection.tempSubDimensions.tempY2;
       var r1 = selection.tempSubDimensions.tempR1;
       var r2 = selection.tempSubDimensions.tempR2;
-      var cx = 300;
-      var cy = 300;
-      var flip1=1;
-      var flip2=1;
-      if (y1>300){
-        flip1=-1;
-      }
-      if (y2>300){
-        flip2=-1;
-      }
-      var shift1 = (y1-cy)+flip1*Math.sqrt(Math.pow(r1,2)-2*(cx+1/2-x1));
-      console.log("shift1: " +shift1);
-      var shift2 = (y2-cy)+flip2*Math.sqrt(Math.pow(r2,2)-2*(cx+1/2-x1));
-      console.log("Drawing: A " + r1 + " " + r1 + " 0 1 1 " + (x1) + " " + (y1-shift1) + " z" );
+      var centre = 300;
+      var endX1 = centre+r1*Math.cos(twoPi-0.01);
+      var endY1 = centre+r1*Math.sin(twoPi-0.01);
+      var endX2 = centre+r2*Math.cos(twoPi-0.01);
+      var endY2 = centre+r2*Math.sin(twoPi-0.01);
+
       //Move: M xStartPos yStartPos
       //Arc: A xradius yradius Xrotation largeArcFlag sweepFlag xFinishPos yFinishPos
-      subSelectionD3.attr("d","M " + x1 + " " + y1 +
-                              " A " + r1 + " " + r1 + " " + (0)+ " 1 1 " + (x1-1) + " " + (y1-shift1) + " z" /*+
-                              " M " + x2 + " " + (y2) +
-                              " A " + r2 + " " + r2 + " " + (0)+ "  1 1 " + (x2-1) + " " + (y2-1) + " z"*/)
+      subSelectionD3.attr("d","M " + (centre +r1) + " " + centre +
+                              " A " + r1 + " " + r1 + " 0 1 1 " + (endX1) + " " + (endY1) + " z" +
+                              " M " + (centre+r2) + " " + centre +
+                              " A " + r2 + " " + r2 + " 0 1 1 " + (endX2) + " " + (endY2) + " z")
                     .attr("fill-rule", "evenodd");
     }
 
