@@ -93,22 +93,26 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       isDefault: true,
       subSelected: false,
       current: "default",
-      currentID: "#default", //for selectors (clipPath-use(currentID))
+      currentID: "#defaultClip", //for selectors (clipPath-use(currentID))
       //subYear values are stored once dragging complete (dragEnd)
       subLowerYear: 0,
       subUpperYear: 0,
       //Temporary sub-selections used while clicking/dragging
+      //stored as relative co-ordinates
       tempSubDimensions: {
-        tempRad1: 0,
-        tempRad2: 0,
+        //Note: tempR1 could be smaller than tempR2
+        tempR1: 0,
+        tempR2: 0,
         tempX1: 0,
-        tempY1: 0
+        tempY1: 0,
+        tempX2: 0,
+        tempY2: 0
       },
       //Dimensions of current subselection
       subDimensions: {
         //dragRad values are temporarily stored radii while dragging
-        Rad1: 0,      //copied from tempRad1 on dragStart
-        Rad2: 0,
+        R1: 0,      //copied from tempR1 on dragStart
+        R2: 0,
         x1: 0,
         y1: 0
       }
@@ -117,8 +121,9 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     var eventLog = {
       mouseDown: 0,
       dragStart: 0,
-      dragging: 0,
+      isDragging: 0,
       startEvent: undefined,
+      draggingEvent: undefined,
       endEvent: undefined
 
     };
@@ -438,7 +443,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     function mouseDownHandler(event){
       console.log("down");
       eventLog.mouseDown = true;
-      eventLog.dragging=false;
+      eventLog.isDragging=false;
       eventLog.startEvent = event;//note: currently not used for anything
       eventLog.dragStart=true;
   //    console.log(event.target);
@@ -447,7 +452,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
     function mouseMoveHandler(event){
       if(eventLog.mouseDown){
-        eventLog.dragging = true;
+        eventLog.isDragging = true;
+        eventLog.draggingEvent = event;
         console.log("moving");
     //    console.log(event.target);
         dragUpdate();
@@ -458,9 +464,9 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       eventLog.mouseDown=false;
       eventLog.endEvent = event;
       eventLog.dragStart=false;
-      if(eventLog.dragging){
+      if(eventLog.isDragging){
         dragEnd();
-        eventLog.dragging=false;
+        eventLog.isDragging=false;
       }
       else{
 
@@ -480,6 +486,24 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       }
       d3.select(arc).style("stroke-opacity",newOpacity);
     }
+    function processMousePos(mouseX,mouseY){
+      console.log("Initial: " + mouseX + " "+ mouseY);
+      //Convert to relative coordinates
+      var relPos = toRelativePos([mouseX,mouseY]);
+      var x1 = relPos[0];
+      var y1 = relPos[1];
+      //Calculate distance from centre (radius)
+      var rad = calculateRadius(x1,y1);
+      console.log("Before: " + x1 + " " + y1 + " " + rad);
+      //cap max radius at viewradius (adjust point to (280,0) if outside range)
+      if(rad>viewradius){
+        rad = viewradius;
+        x1 = viewradius;
+        y1 = 0;
+      }
+      console.log("After: " + x1+" "+ y1 + " " + rad);
+      return [x1,y1,rad];
+    }
     //Note current implemented input is array [x,y]
     function toRelativePos(rawInputPos){
       var convertedPos = [0,0];
@@ -489,6 +513,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       convertedPos[1] = rawInputPos[1]-100; //note: based on current css, (also - need to factor in window scroll)
       return convertedPos;
     }
+
     //Note: based on relative coordinates, call toRelativePos first for absolute co-ordinates
     function calculateRadius(xpos,ypos){
       //Radius calculation - distance formula, should add newton approximation for faster version.
@@ -498,26 +523,15 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       //Note: current implementation changes x and y if r greater than view rad
     }
     function clickStart(){
-      //REMOVE XA AND YA when done testing!
-      var xA = eventLog.startEvent.clientX;
-      var yA = eventLog.startEvent.clientY;
-      console.log("Initial: " + xA + " "+ yA);
-      var relPos = toRelativePos([eventLog.startEvent.clientX,eventLog.startEvent.clientY]); //could possibly store x and y directly if desired, or reference (event)
-      var x1 = relPos[0];
-      var y1 = relPos[1];
-      var r1 = calculateRadius(x1,y1);
-      console.log("Before: " + x1 + " " + y1 + " " + r1);
-      //boundary case: click outside of active region
-      if(r1>viewradius){
-        r1= viewradius;
-        x1= viewradius;
-        y1= 0;
-
-      }
-      selection.tempSubDimensions.tempX1=x1;
-      selection.tempSubDimensions.tempY1=y1;
-      selection.tempSubDimensions.tempr1=r1;
-      console.log("After: " + x1+" "+ y1 + " " + r1);
+      //get mouse position
+      var mouseX = eventLog.startEvent.clientX;
+      var mouseY = eventLog.startEvent.clientY;
+      //return relative co-ordinates and calculated radius, capped at viewradius
+      var cleanXYR = processMousePos(mouseX,mouseY);
+      //store adjusted coordinates and radius
+      selection.tempSubDimensions.tempX1=cleanXYR[0];
+      selection.tempSubDimensions.tempY1=cleanXYR[1];
+      selection.tempSubDimensions.tempR1=cleanXYR[2];
     }
 
     function clickEnd(){
@@ -538,7 +552,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           selection.currentID="#"+ d3.select(target).attr("id");
 
           setArcBorder(target);
-          clipSubRegion();
+//        clipSubRegion();
         }
       } else{ //clicked on window - clear selection
         if(!selection.isDefault){
@@ -554,28 +568,48 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       console.log("finished dragging!");
     }
     function dragUpdate(){
+      //Special tasks when dragging first starts
       if (eventLog.dragStart){
-        selection.subSelected=true; //need to FIX THIS - just put it here temporarily. Never set to false again.
+        selection.subSelected=true; //need to FIX THIS - just put it here temporarily. Never goes back to false.
         console.log("started dragging!");
         eventLog.dragStart=false;
+        //Note: Possibly transfer X1,Y1 and r1 from tempSubDimensions to subDimensions on dragStart
       }
       else{
         console.log("dragging");
       }
+      //get mouse position
+      var mx = eventLog.draggingEvent.clientX;
+      var my = eventLog.draggingEvent.clientY;
+      //process coordinates
+      var cleanXYR = processMousePos(mx,my);
+      //store processed data in tempSubDimensions
+      selection.tempSubDimensions.tempX2 = cleanXYR[0];
+      selection.tempSubDimensions.tempY2 = cleanXYR[1];
+      selection.tempSubDimensions.tempR2 = cleanXYR[2];
+      drawSubRegion();
     }
 
-    function drawSubRegion(r1,r2){
+    function drawSubRegion(){
       //note: sub-region clip path is not inside the normal svg <g> translation
-      var w = canvasWidth/2;
-      var h = canvasHeight/2;
+      //note: currently drawing temp selection (while dragging), not final selection
+      console.log("Stored: " + selection.tempSubDimensions.tempX1 + " " + selection.tempSubDimensions.tempY1);
+      var x1 = selection.tempSubDimensions.tempX1;
+      var x2 = selection.tempSubDimensions.tempX2;
+      var y1 = selection.tempSubDimensions.tempY1;
+      var y2 = selection.tempSubDimensions.tempY2;
+      var r1 = selection.tempSubDimensions.tempR1;
+      var r2 = selection.tempSubDimensions.tempR2;
+      console.log("Drawing: A " + r1 + " " + r1 + " 0 1 1 " + (x1-1) + " " + (y1) + " z" );
       //Move: M xStartPos yStartPos
       //Arc: A xradius yradius Xrotation largeArcFlag sweepFlag xFinishPos yFinishPos
-      subSelectionD3.attr("d","M " + w + " " + (h-r1) +
-                              " A " + r1 + " " + r1 + " 0 1 1 " + (w-1) + " " + (h-r1) + " z" +
-                              " M " + w + " " + (h-r2) +
-                              " A " + r2 + " " + r2 + " 0 1 1 " + (w-1) + " " + (h-r2) + " z")
+      subSelectionD3.attr("d","M " + x1 + " " + y1 +
+                              " A " + r1 + " " + r1 + " 0 1 1 " + (x1-1) + " " + (y1) + " z" +
+                              " M " + x2 + " " + (y2) +
+                              " A " + r2 + " " + r2 + " 0 1 1 " + (x2-1) + " " + (y2) + " z")
                     .attr("fill-rule", "evenodd");
     }
+
     function clipSubRegion(){
       if((selection.subSelected) && (!selection.isDefault)){
         console.log("changing clip Path");
@@ -583,10 +617,10 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       }
       else{
         console.log("clearing clip Path");
-        useClipD3.attr("xlink:href","#subSelection");
+        useClipD3.attr("xlink:href","#defaultClip");
       }
     }
-    drawSubRegion(100,200);
+//    drawSubRegion();
     clipSubRegion();
     function setup(){
       //EVENT LISTENERS
