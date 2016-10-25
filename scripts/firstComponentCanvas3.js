@@ -6,7 +6,10 @@ var svgLayer = document.getElementById("svgLayer");
 var container = svgLayer;
 var svgD3 = d3.select("#svgLayer");
 var groupD3 = svgD3.append("g");
-
+var subSelectionD3 = svgD3.append("path").attr("id","subSelection")
+    subSelectionD3.attr("clip-path","url(#clipRegion)");
+var subSelection = document.getElementById("subSelection");
+var useClipD3 = d3.select("#useRegion");
 var ctx = canvas.getContext("2d");
 var textFields = d3.selectAll(".paneltext");
 var canvasd3 = d3.select(canvas);
@@ -53,16 +56,9 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     //---pseudo-globals---
     var totalVoyages = Voyages.length;
     var scaledYear = 1514;
-    var arcsD3=groupD3.selectAll("path").data(dRegions).enter().append("path");
+    var arcsD3=groupD3.selectAll("path").data(dRegions).enter().append("path").attr("id",function(d,i){return "arcR"+i;});
     //Visible Objects - Stores information about current visible selection
-    var selection = {
-      isDefault: true,
-      subSelected: false,
-      current: "default",
 
-      subLower: 0,
-      subUpper: 0
-    }
     var visible = {
       index: 0,
       embarked: 224,
@@ -92,6 +88,32 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       newAdded: 0,
       scrollCount:0
     };
+    //Data on selected and sub selected regions (for interactivity)
+    var selection = {
+      isDefault: true,
+      subSelected: false,
+      current: "default",
+      currentID: "#default", //for selectors (clipPath-use(currentID))
+      //subYear values are stored once dragging complete (dragEnd)
+      subLowerYear: 0,
+      subUpperYear: 0,
+      //Temporary sub-selections used while clicking/dragging
+      tempSubDimensions: {
+        tempRad1: 0,
+        tempRad2: 0,
+        tempX1: 0,
+        tempY1: 0
+      },
+      //Dimensions of current subselection
+      subDimensions: {
+        //dragRad values are temporarily stored radii while dragging
+        Rad1: 0,      //copied from tempRad1 on dragStart
+        Rad2: 0,
+        x1: 0,
+        y1: 0
+      }
+    };
+    //Stores data from input events, used in mouse click and drag detection
     var eventLog = {
       mouseDown: 0,
       dragStart: 0,
@@ -150,7 +172,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
 
 
 
-    //makeRadius and makeTheta only used in initial data setup
+    //makeRadius and makeTheta only used in initial data setup -overridden
 
     //---helper functions---
     //roundFloat: Rounding
@@ -417,7 +439,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       console.log("down");
       eventLog.mouseDown = true;
       eventLog.dragging=false;
-      eventLog.startEvent = event;
+      eventLog.startEvent = event;//note: currently not used for anything
+      eventLog.dragStart=true;
   //    console.log(event.target);
       clickStart();
 //      svgD3.append("circle").attr("cx",event.clientX).attr("cy",event.clientY-100).attr("r",15).attr("fill","blue");
@@ -425,6 +448,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     function mouseMoveHandler(event){
       if(eventLog.mouseDown){
         eventLog.dragging = true;
+        console.log("moving");
+    //    console.log(event.target);
         dragUpdate();
       }
       //svgD3.append("circle").attr("cx",event.clientX).attr("cy",event.clientY-100).attr("r",4).attr("fill","purple");
@@ -432,11 +457,13 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     function mouseUpHandler(event){
       eventLog.mouseDown=false;
       eventLog.endEvent = event;
+      eventLog.dragStart=false;
       if(eventLog.dragging){
         dragEnd();
         eventLog.dragging=false;
       }
       else{
+
         clickEnd();
       }
       console.log("up");
@@ -453,9 +480,44 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       }
       d3.select(arc).style("stroke-opacity",newOpacity);
     }
-
+    //Note current implemented input is array [x,y]
+    function toRelativePos(rawInputPos){
+      var convertedPos = [0,0];
+      //x shift
+      convertedPos[0] = rawInputPos[0];
+      //y shift
+      convertedPos[1] = rawInputPos[1]-100; //note: based on current css, (also - need to factor in window scroll)
+      return convertedPos;
+    }
+    //Note: based on relative coordinates, call toRelativePos first for absolute co-ordinates
+    function calculateRadius(xpos,ypos){
+      //Radius calculation - distance formula, should add newton approximation for faster version.
+      centre = canvasWidth/2;
+      var radius = Math.sqrt(Math.pow((centre - xpos),2)+Math.pow((centre - ypos),2));
+      return radius;
+      //Note: current implementation changes x and y if r greater than view rad
+    }
     function clickStart(){
-      eventLog.dragStart=true;
+      //REMOVE XA AND YA when done testing!
+      var xA = eventLog.startEvent.clientX;
+      var yA = eventLog.startEvent.clientY;
+      console.log("Initial: " + xA + " "+ yA);
+      var relPos = toRelativePos([eventLog.startEvent.clientX,eventLog.startEvent.clientY]); //could possibly store x and y directly if desired, or reference (event)
+      var x1 = relPos[0];
+      var y1 = relPos[1];
+      var r1 = calculateRadius(x1,y1);
+      console.log("Before: " + x1 + " " + y1 + " " + r1);
+      //boundary case: click outside of active region
+      if(r1>viewradius){
+        r1= viewradius;
+        x1= viewradius;
+        y1= 0;
+
+      }
+      selection.tempSubDimensions.tempX1=x1;
+      selection.tempSubDimensions.tempY1=y1;
+      selection.tempSubDimensions.tempr1=r1;
+      console.log("After: " + x1+" "+ y1 + " " + r1);
     }
 
     function clickEnd(){
@@ -473,7 +535,10 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           }
           //set new selection
           selection.current=target;
+          selection.currentID="#"+ d3.select(target).attr("id");
+
           setArcBorder(target);
+          clipSubRegion();
         }
       } else{ //clicked on window - clear selection
         if(!selection.isDefault){
@@ -490,6 +555,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
     function dragUpdate(){
       if (eventLog.dragStart){
+        selection.subSelected=true; //need to FIX THIS - just put it here temporarily. Never set to false again.
         console.log("started dragging!");
         eventLog.dragStart=false;
       }
@@ -497,6 +563,31 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         console.log("dragging");
       }
     }
+
+    function drawSubRegion(r1,r2){
+      //note: sub-region clip path is not inside the normal svg <g> translation
+      var w = canvasWidth/2;
+      var h = canvasHeight/2;
+      //Move: M xStartPos yStartPos
+      //Arc: A xradius yradius Xrotation largeArcFlag sweepFlag xFinishPos yFinishPos
+      subSelectionD3.attr("d","M " + w + " " + (h-r1) +
+                              " A " + r1 + " " + r1 + " 0 1 1 " + (w-1) + " " + (h-r1) + " z" +
+                              " M " + w + " " + (h-r2) +
+                              " A " + r2 + " " + r2 + " 0 1 1 " + (w-1) + " " + (h-r2) + " z")
+                    .attr("fill-rule", "evenodd");
+    }
+    function clipSubRegion(){
+      if((selection.subSelected) && (!selection.isDefault)){
+        console.log("changing clip Path");
+        useClipD3.attr("xlink:href",selection.currentID);
+      }
+      else{
+        console.log("clearing clip Path");
+        useClipD3.attr("xlink:href","#subSelection");
+      }
+    }
+    drawSubRegion(100,200);
+    clipSubRegion();
     function setup(){
       //EVENT LISTENERS
       //Add Zoom Event Listener

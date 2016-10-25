@@ -8,9 +8,10 @@
 	<body>
 		<h1> The Transatlantic Slave Trade </br> (scroll over circles to zoom out) </h1>
 		<canvas id="myCanvas" width = "600" height="600"></canvas>
-		<svg id="svgLayer" width = "600" height = "600" >
+		<svg id="svgLayer" width = "600" height = "600">
 			<defs>
-				<clipPath>
+				<clipPath id= "clipRegion">
+					<use id="useRegion" xlink:href="" transform="translate(300,300)"></use>
 				</clipPath>
 			</defs>
 
