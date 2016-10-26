@@ -62,6 +62,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     var totalVoyages = Voyages.length;
     var scaledYear = 1514;
     var arcsD3=groupD3.selectAll("path").data(dRegions).enter().append("path").attr("id",function(d,i){return "arcR"+i;});
+
+
     //Visible Objects - Stores information about current visible selection
 
     var visible = {
@@ -166,6 +168,25 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         currentR.percentRadians = +currentR.percentRadians;
         currentR.minRadians= +currentR.minRadians;
         currentR.maxRadians= +currentR.maxRadians;
+      }
+    })();
+
+    (function regionDataPointers(){
+      for (i=0;i<8;i++){
+        dRegions[i].indexList = [];
+        if(i==0){
+          dRegions[0].visibleCount=1;
+        }
+        else{
+          dRegions[i].visibleCount = 0
+        }
+      }
+      for (i=0;i<totalVoyages;i++){
+        var regionID = Voyages[i].landingRegion;
+        dRegions[regionID].indexList.push(i);
+      }
+      for (i=0;i<8;i++){
+        dRegions[i].totalRegion = dRegions[i].indexList.length;
       }
     })();
 
@@ -279,7 +300,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           current.newEmbarked += voyage.embarked;
           current.newDisembarked += voyage.disembarked;
           current.newAdded++;
-          visible.regionCount[voyage.landingRegion]++;
+          dRegions[voyage.landingRegion].visibleCount++;
         }
         if (i>=totalVoyages){
           i--;
@@ -296,7 +317,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           current.newEmbarked -= voyage.embarked;
           current.newDisembarked -= voyage.disembarked;
           current.newAdded--;
-          visible.regionCount[voyage.landingRegion]--;
+          dRegions[voyage.landingRegion].visibleCount--;
         }
           visible.index=i;
       }
@@ -323,7 +344,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       {
   //      console.log("Before " + dRegions[i].minRadians,dRegions[i].percentRadians);
         dRegions[i].minRadians = tempMinTheta;
-        thetaRange = twoPi *visible.regionCount[i]/visible.total;
+        thetaRange = twoPi *dRegions[i].visibleCount/visible.total;
         dRegions[i].percentRadians = thetaRange;
         tempMinTheta += thetaRange;
         dRegions[i].maxRadians = tempMinTheta;
