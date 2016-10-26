@@ -7,7 +7,12 @@ var container = svgLayer;
 var svgD3 = d3.select("#svgLayer");
 var groupD3 = svgD3.append("g");
 var subSelectionD3 = svgD3.append("path").attr("id","subSelection")
-    subSelectionD3.attr("clip-path","url(#clipRegion)");
+    subSelectionD3.attr("clip-path","url(#clipRegion)")
+                  .attr("fill-rule", "evenodd")
+                  .attr("fill-opacity",0.6)
+                  .attr("fill","gray")
+                  .attr("stroke","#4d4d4d")
+                  .attr("stroke-width",10);
 var subSelection = document.getElementById("subSelection");
 var useClipD3 = d3.select("#useRegion");
 var ctx = canvas.getContext("2d");
@@ -91,7 +96,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     //Data on selected and sub selected regions (for interactivity)
     var selection = {
       isDefault: true,
-      subSelected: false,
+      subSelected: true,
       current: "default",
       currentID: "#defaultClip", //for selectors (clipPath-use(currentID))
       //subYear values are stored once dragging complete (dragEnd)
@@ -346,7 +351,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
             .style("fill-opacity",opacity)
             .style("stroke",function(d){return d.color})
             .style("stroke-opacity",0)
-            .style("stroke-width",2).attr("class","arc");
+            .style("stroke-width",5).attr("class","arc");
   //    arcsD3.on("click",function(d,i){console.log(d.regionName);
   //    });
     })();
@@ -487,21 +492,21 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       d3.select(arc).style("stroke-opacity",newOpacity);
     }
     function processMousePos(mouseX,mouseY){
-      console.log("Initial: " + mouseX + " "+ mouseY);
+      //console.log("Initial: " + mouseX + " "+ mouseY);
       //Convert to relative coordinates
       var relPos = toRelativePos([mouseX,mouseY]);
       var x1 = relPos[0];
       var y1 = relPos[1];
       //Calculate distance from centre (radius)
       var rad = calculateRadius(x1,y1);
-      console.log("Before: " + x1 + " " + y1 + " " + rad);
+      //console.log("Before: " + x1 + " " + y1 + " " + rad);
       //cap max radius at viewradius (adjust point to (280,0) if outside range)
       if(rad>viewradius){
         rad = viewradius;
         x1 = canvasWidth/2;
         y1 = canvasWidth/2-viewradius;
       }
-      console.log("After: " + x1+" "+ y1 + " " + rad);
+      //console.log("After: " + x1+" "+ y1 + " " + rad);
       return [x1,y1,rad];
     }
     //Note current implemented input is array [x,y]
@@ -522,6 +527,11 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       return radius;
       //Note: current implementation changes x and y if r greater than view rad
     }
+    function radiusToYear(radius,floor=true){
+      var year = (radius/viewradius)*(current.year-1513)+1514;
+      return Math.floor(year); //note: will be slightly out if current year is not matched to match viewrad
+    }
+
     function clickStart(){
       //get mouse position
       var mouseX = eventLog.startEvent.clientX;
@@ -535,15 +545,24 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
 
     function clickEnd(){
-      target = eventLog.endEvent.target;
+      var target = eventLog.endEvent.target;
+      var targetClass = d3.select(target).attr("class");
+      var targetID = d3.select(target).attr("id");
+      console.log("ClickEnd target: " + target);
+      console.log("ClickEnd targetID: "+targetID);
+      console.log("ClickEnd target class: "+targetClass);
       //If clicked on arc
-      if(target.tagName="path"){
+      if(targetClass=="arc"){
         //clicked selected arc - do nothing
         //clicked unselected arc - change selection
-        if(target!=selection.current){
+        if(target==selection.current){
+          toggleSubSelection();
+        }
+        else{
           //clear previous selection
           if(selection.isDefault){
           selection.isDefault = false;
+          showSubSelection();
           } else{
             setArcBorder(selection.current,"clear");
           }
@@ -552,20 +571,73 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           selection.currentID="#"+ d3.select(target).attr("id");
 
           setArcBorder(target);
+          console.log("Clipping Region!");
          clipSubRegion();
         }
-      } else{ //clicked on window - clear selection
-        if(!selection.isDefault){
-          selection.isDefault = true;
-          console.log("cleared current selection!")
-        } else{
-          setArcBorder(current,"clear");
+      }
+      else if(targetID=="subSelection"){
+        hideSubSelection();
+      }
+      else{ //clicked on window - clear selection
+          clearSelection();
         }
+    }
+    function toggleSubSelection(){
+      var status = selection.subStatus;
+      if (status=="visible"){
+        hideSubSelection();
+      }
+      else if (status=="hidden"){
+        showSubSelection();
       }
     }
+    function clearSelection(){
+      if(!selection.isDefault){
+        currentSelection = selection.current;
+        selection.isDefault = true;
+        setArcBorder(currentSelection,"clear");
+        selection.current = "default";
+      }
+      clipSubRegion();
+      hideSubSelection();
+    }
 
+    function hideSubSelection(){
+      subSelectionD3.attr("visibility","hidden");
+      selection.subStatus = "hidden";
+    }
+    function showSubSelection(){
+      subSelectionD3.attr("visibility", "visible");
+      selection.subStatus = "visible";
+    }
+    function clearSubSelection(){
+      selection.subStatus = "cleared";
+    }
+    function updateSubDimensions(){
+      var r1 = selection.tempSubDimensions.tempR1;
+      var r2 = selection.tempSubDimensions.tempR2;
+      var lowerR = Math.min(r1,r2);
+      var upperR = Math.max(r1,r2);
+      selection.subLowerYear=radiusToYear(lowerR);
+      selection.subUpperYear=radiusToYear(upperR);
+      selection.subDimensions.R1= lowerR;
+      selection.subDimensions.R2= upperR;
+    }
     function dragEnd(){
+      var endTarget = eventLog.endEvent.target;
+      console.log("End Target Object: " + endTarget);
+      console.log("End Target ID: " + d3.select(endTarget).attr("id"));
+      var startedOff = eventLog.startEvent.target.matches("#svgLayer");
+      var endedOff = eventLog.endEvent.target.matches("#svgLayer");
+      if(!(startedOff && endedOff)){
+      updateSubDimensions();
       console.log("finished dragging!");
+      console.log("Year Lower: " + selection.subLowerYear + "Upper: " + selection.subUpperYear);
+      }
+      else
+      {
+        console.log("Didn't Update Sub Dimensions!");
+      }
     }
     function dragUpdate(){
       //Special tasks when dragging first starts
@@ -606,8 +678,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       subSelectionD3.attr("d","M " + (centre +r1) + " " + centre +
                               " A " + r1 + " " + r1 + " 0 1 1 " + (endX1) + " " + (endY1) + " z" +
                               " M " + (centre+r2) + " " + centre +
-                              " A " + r2 + " " + r2 + " 0 1 1 " + (endX2) + " " + (endY2) + " z")
-                    .attr("fill-rule", "evenodd");
+                              " A " + r2 + " " + r2 + " 0 1 1 " + (endX2) + " " + (endY2) + " z");
+
     }
 
     function clipSubRegion(){
