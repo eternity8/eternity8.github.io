@@ -388,7 +388,12 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         ctx.fill();
         ctx.restore();
     }
+    function zoomSubSelection(){
+      if(!(eventLog.isDragging)){
+        clearSubSelection();
+      }
 
+    }
     //---update functions---
 
     //updateTheta - will add
@@ -423,7 +428,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       if(preferences.showArcs){
         updateArcs();
       }
-
+      zoomSubSelection();
     }
 
     //KEYBOARD HANDLER
@@ -498,7 +503,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       var x1 = relPos[0];
       var y1 = relPos[1];
       //Calculate distance from centre (radius)
-      var rad = calculateRadius(x1,y1);
+      var rad = mouseToRadius(x1,y1);
       //console.log("Before: " + x1 + " " + y1 + " " + rad);
       //cap max radius at viewradius (adjust point to (280,0) if outside range)
       if(rad>viewradius){
@@ -520,13 +525,19 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
 
     //Note: based on relative coordinates, call toRelativePos first for absolute co-ordinates
-    function calculateRadius(xpos,ypos){
+    function mouseToRadius(xpos,ypos){
       //Radius calculation - distance formula, should add newton approximation for faster version.
       centre = canvasWidth/2;
       var radius = Math.sqrt(Math.pow((centre - xpos),2)+Math.pow((centre - ypos),2));
       return radius;
       //Note: current implementation changes x and y if r greater than view rad
     }
+
+    function yearToRadius(year){
+      var radius = (year-1514)*(viewradius/(current.year-1513));
+      return radius;
+    }
+
     function radiusToYear(radius,floor=true){
       var year = (radius/viewradius)*(current.year-1513)+1514;
       return Math.floor(year); //note: will be slightly out if current year is not matched to match viewrad
@@ -551,18 +562,20 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       console.log("ClickEnd target: " + target);
       console.log("ClickEnd targetID: "+targetID);
       console.log("ClickEnd target class: "+targetClass);
+      console.log("currentSelection: " +selection.current);
       //If clicked on arc
       if(targetClass=="arc"){
         //clicked selected arc - do nothing
-        //clicked unselected arc - change selection
+
         if(target==selection.current){
           toggleSubSelection();
         }
+        //clicked unselected arc - change selection
         else{
           //clear previous selection
           if(selection.isDefault){
           selection.isDefault = false;
-          showSubSelection();
+          //showSubSelection();
           } else{
             setArcBorder(selection.current,"clear");
           }
@@ -590,6 +603,9 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       else if (status=="hidden"){
         showSubSelection();
       }
+      else if (status=="cleared"){
+        //do Nothing
+      }
     }
     function clearSelection(){
       if(!selection.isDefault){
@@ -611,6 +627,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       selection.subStatus = "visible";
     }
     function clearSubSelection(){
+      subSelectionD3.attr("visibilty","hidden");
+      subSelectionD3.attr("d","");
       selection.subStatus = "cleared";
     }
     function updateSubDimensions(){
@@ -643,6 +661,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       //Special tasks when dragging first starts
       if (eventLog.dragStart){
         selection.subSelected=true; //need to FIX THIS - just put it here temporarily. Never goes back to false.
+        selection.subStatus="visible";
+        showSubSelection();
         console.log("started dragging!");
         eventLog.dragStart=false;
         //Note: Possibly transfer X1,Y1 and r1 from tempSubDimensions to subDimensions on dragStart
