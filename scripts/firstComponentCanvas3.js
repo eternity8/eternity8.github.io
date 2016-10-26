@@ -172,7 +172,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     //Legend Creation - executes once at start
     (function createLegend(){
     var legendDiv = d3.select("#legend");
-    legendDiv.append("h3").text("Region of Slave Landing").style("text-align","center");
+    legendDiv.append("h3").text("Region of Slave Landing");
     legendgroups = legendDiv.append("svg").attr("height",600).attr("width",200).selectAll("g").data(dRegions).enter().append("g")
     legendgroups.attr("transform",function(d,i){return "translate( " +Math.floor(i/legendPerColumn) *(2*legendRectSpacing+legendRectWidth+legendTextWidth)+", " +(legendRectWidth+legendRectSpacing)*(i%legendPerColumn)+")";});
     rectangles = legendgroups.append("rect").attr("fill",function(d){return d.color;}).attr("width",legendRectWidth).attr("height",legendRectWidth);
@@ -520,7 +520,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       //x shift
       convertedPos[0] = rawInputPos[0];
       //y shift
-      convertedPos[1] = rawInputPos[1]-100; //note: based on current css, (also - need to factor in window scroll)
+      convertedPos[1] = rawInputPos[1]-50; //note: based on current css, (also - need to factor in window scroll)
       return convertedPos;
     }
 

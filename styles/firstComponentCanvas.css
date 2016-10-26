@@ -1,9 +1,13 @@
 #updatePanel {
-  position:static;
-  float: left;
+  position: absolute;
+  left: 650px;
 }
 #updatePanel p {
   font-size: 24px;
+}
+
+#updatePanel b {
+  font-size: 36px;
 }
 
 .arc {
@@ -12,17 +16,21 @@
   fill-opacity:0.2;
 }
 
-
-#updatePanel b {
-  font-size: 36px;
-}
-
 #legend {
-  position: static;
-  float: left;
-  width:440px;
+  position: absolute;
+  left: 20px;
+  top: 605px;
   height:180px;
   font-size: 24px;
+/*  border-style: solid;
+  border-color: red;
+  border-width: 10px;*/
+}
+
+#legend h3 {
+  position: relative;
+  top: 20px;
+  left: 100px;
 }
 
 
@@ -32,14 +40,14 @@
 canvas {
   z-index: 1;
   position: absolute;
-  top: 100px;
+  top: 50px;
   left: 0px;
 }
 
 #svgLayer {
   z-index: 2;
   position: absolute;
-  top: 100px;
+  top: 50px;
   left: 0px;
 }
 
