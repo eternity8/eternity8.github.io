@@ -129,6 +129,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       mouseDown: 0,
       dragStart: 0,
       isDragging: 0,
+      dragCount: 0,
       startEvent: undefined,
       draggingEvent: undefined,
       endEvent: undefined
@@ -139,9 +140,11 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       //adjust zoom scaling method (true: add/minus years, false: times/divide current year by factor)
       zoomIsLinear: true,
       zoomSpeed: 4,
+      minDragCount: 2,
       //toggles whether scroll speed affects zoom speed
       useDelta: true,
-      showArcs: true
+      showArcs: true,
+      showColors: true
     };
 
     //---one-time-functions---
@@ -385,14 +388,39 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         var upperIndex = visible.index;
         var scaleYear = current.year-1513;
         var scale = viewradius/scaleYear;
-        circleSize=scale/2;
+        circleSize=scale*0.8;
       //  console.log(circleSize);
-        var x, y, theta, r, color, regionID;
+        var x, y, theta, r, color, regionID, length, region,voyage;
         ctx.clearRect(0,0,canvasWidth,canvasHeight);
         ctx.save();
         ctx.translate(canvasWidth/2,canvasHeight/2);
-
-        ctx.beginPath()
+        //New Painting Implementation based on regions
+        for (rID=0;rID<8;rID++){
+          region = dRegions[rID];
+          length = region.visibleCount;
+          if(preferences.showColors){
+              ctx.fillStyle = region.color;
+          }
+          ctx.beginPath();
+          for (i=0;i<length;i++){
+            voyage=Voyages[region.indexList[i]];
+            r = voyage.shiftedYear*scale;
+            if(preferences.showArcs){
+              theta = voyage.rand*region.percentRadians+region.minRadians;
+            }
+            else{
+              theta = voyage.rand*twoPi;
+            }
+            x = r*Math.cos(theta);
+            y = r*Math.sin(theta);
+            ctx.moveTo(x,y);
+            ctx.arc(x,y,circleSize,0,twoPi,1);
+          }
+          ctx.fill();
+          ctx.closePath();
+        }
+/*        //old painting implementation
+        ctx.beginPath();
         for (i=0;i<=upperIndex;i++){
           regionID = Voyages[i].landingRegion;
           r = Voyages[i].shiftedYear*scale;
@@ -406,7 +434,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           ctx.arc(x,y,circleSize,0,twoPi,1);
 
         }
-        ctx.fill();
+        ctx.fill(); */
         ctx.restore();
     }
     function zoomSubSelection(){
@@ -483,18 +511,25 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
     function mouseMoveHandler(event){
       if(eventLog.mouseDown){
-        eventLog.isDragging = true;
-        eventLog.draggingEvent = event;
-        console.log("moving");
-    //    console.log(event.target);
-        dragUpdate();
+        if(eventLog.dragCount>preferences.minDragCount){
+          eventLog.isDragging = true;
+          eventLog.draggingEvent = event;
+          console.log("moving");
+      //    console.log(event.target);
+          dragUpdate();
+        }
+        else{
+          eventLog.dragCount++;
+        }
       }
+
       //svgD3.append("circle").attr("cx",event.clientX).attr("cy",event.clientY-100).attr("r",4).attr("fill","purple");
     }
     function mouseUpHandler(event){
       eventLog.mouseDown=false;
       eventLog.endEvent = event;
       eventLog.dragStart=false;
+      eventLog.dragCount=0;
       if(eventLog.isDragging){
         dragEnd();
         eventLog.isDragging=false;
@@ -575,7 +610,42 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       selection.tempSubDimensions.tempY1=cleanXYR[1];
       selection.tempSubDimensions.tempR1=cleanXYR[2];
     }
+    function toggleArcs(){
+      preferences.showArcs = !(preferences.showArcs);
+      var arcs = d3.selectAll(".arc");
+      if (preferences.showArcs){
+        updateArcs();
+        updateCirclePositions();
+        arcs.style("visibility","visible");
+      }
+      else {
+        arcs.style("visibility","hidden");
+        clearSelection();
+      }
+      updateCirclePositions();
+      toggleLegend();
+    }
 
+    function toggleColors(forceOn=false){
+      if(forceOn){
+        preferences.showColors= true;
+      }
+      else{
+        preferences.showColors=(!preferences.showColors);
+      }
+
+      updateCirclePositions();
+      toggleLegend();
+    }
+
+    function toggleLegend(){
+      if (preferences.showColors || preferences.showArcs){
+        d3.select("#legend").style("visibility","visible");
+      }
+      else {
+        d3.select("#legend").style("visibility","hidden");
+      }
+    }
     function clickEnd(){
       var target = eventLog.endEvent.target;
       var targetClass = d3.select(target).attr("class");
@@ -584,8 +654,16 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       console.log("ClickEnd targetID: "+targetID);
       console.log("ClickEnd target class: "+targetClass);
       console.log("currentSelection: " +selection.current);
+      if(targetID=="button1"){
+        toggleArcs();
+        return;
+      }
+      else if(targetID=="button2"){
+        toggleColors();
+        return;
+      }
       //If clicked on arc
-      if(targetClass=="arc"){
+      else if(targetClass=="arc"){
         //clicked selected arc - do nothing
 
         if(target==selection.current){
@@ -603,7 +681,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           //set new selection
           selection.current=target;
           selection.currentID="#"+ d3.select(target).attr("id");
-
+          console.log("selectionID: "+selection.currentID);
           setArcBorder(target);
           console.log("Clipping Region!");
          clipSubRegion();
