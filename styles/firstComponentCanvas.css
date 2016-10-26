@@ -1,8 +1,19 @@
+h1 {
+  position: relative;
+  top: -10px;
+  left: 0px;
+  font-size: 64px;
+  -webkit-margin-before: 0px;
+  white-space: nowrap;
+}
+
 #updatePanel {
+  white-space: nowrap;
   position: absolute;
   left: 650px;
 }
 #updatePanel p {
+
   font-size: 24px;
 }
 
@@ -45,10 +56,20 @@ canvas {
 }
 
 #svgLayer {
+  border: border;
   z-index: 2;
   position: absolute;
   top: 50px;
   left: 0px;
+  stroke: black;
+  stroke-width: 5px;
+}
+
+#reference {
+  font-size: 22px;
+  position: fixed;
+  right: 20px;
+  bottom: 0;
 }
 
 #filler {
