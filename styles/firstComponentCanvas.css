@@ -98,3 +98,15 @@ canvas {
   position: static;
   float: left;
 }
+
+#scrollHere {
+  z-index: 3;
+  position: absolute;
+  left: 110px;
+  top: 240px;
+  font-size: 80px;
+  color: white;
+  opacity: 0.6;
+  font-family: arial;
+  -webkit-text-stroke: 3px white;
+}

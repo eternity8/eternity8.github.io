@@ -448,7 +448,11 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     //updateTheta - will add
 
     //updateArc - will add
-
+    function preZoomHandler(event){
+      console.log("triggered!");
+      d3.select("#scrollHere").style("visibility","hidden");
+      myZoomHandler(event);
+    }
     //ZOOM HANDLER FUNCTION
     function myZoomHandler(event){
       event.preventDefault();
@@ -816,9 +820,9 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     function setup(){
       //EVENT LISTENERS
       //Add Zoom Event Listener
-      svgLayer.addEventListener("wheel",myZoomHandler);
+      svgLayer.addEventListener("wheel",preZoomHandler);
       //Click and Drag Event Listeners
-
+      document.getElementById("scrollHere").addEventListener("wheel",preZoomHandler);
   //    svgLayer.addEventListener("mousedown",mouseDownHandler);
       svgLayer.addEventListener("mousemove",mouseMoveHandler);
 //      svgLayer.addEventListener("mousedown",mouseDownHandler);
