@@ -12,7 +12,7 @@ var subSelectionD3 = svgD3.append("path").attr("id","subSelection")
                   .attr("fill-opacity",0.6)
                   .attr("fill","gray")
                   .attr("stroke","#4d4d4d")
-                  .attr("stroke-width",10);
+                  .attr("stroke-width",5);
 var subSelection = document.getElementById("subSelection");
 var useClipD3 = d3.select("#useRegion");
 var ctx = canvas.getContext("2d");
@@ -51,12 +51,41 @@ var legendRectSpacing = 5;
 var legendPerColumn = 4;
 var legendTextWidth = 320;
 
+//Bar chart preferences
+var chartPrefs = {
+  regionWidth: 60,
+  barThickness: 0.8,
+  offsetX: 100,
+  offsetY: 600,
+  yBarScale: 1,
+  maxBarHeight: 300,
+  fixedScale:false
+};
+
+
+var data1 = [1,0,0,0,0,0,0,0];
+
+var chartContainerD3 = d3.select("body").append("svg").attr("id","chartContainer");
+var chartContainer = document.getElementById("#chartContainer");
+chartContainerD3.attr("width",600).attr("height",600);
+var bars = chartContainerD3.selectAll("rect").data(data1).enter().append("rect");
+chartContainerD3.style("visibility","hidden");
+
+
+
 //EssentialSlaveData variables: yearam, embarked, disembarked, rand, landingRegion, baseRadius, shiftedYear
 d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
   //Regions variables: regionName, percentVisible, percentRadians, minRadians, maxRadians, color
   d3.csv("http://localhost/data/regions.csv", function(dRegions){
 
     console.log("Canvas Re-Write!");
+
+
+
+
+
+
+
 
     //---pseudo-globals---
     var totalVoyages = Voyages.length;
@@ -100,6 +129,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       isDefault: true,
       subSelected: true,
       current: "default",
+    //  currentRegion: NaN, Note: plan to implement this so I can change color of dots based on selection
       currentID: "#defaultClip", //for selectors (clipPath-use(currentID))
       //subYear values are stored once dragging complete (dragEnd)
       subLowerYear: 0,
@@ -108,6 +138,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       //stored as relative co-ordinates
       tempSubDimensions: {
         //Note: tempR1 could be smaller than tempR2
+        startYear: 1514,
         tempR1: 0,
         tempR2: 0,
         tempX1: 0,
@@ -128,7 +159,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     var eventLog = {
       mouseDown: 0,
       dragStart: 0,
-      isDragging: 0,
+      zoomDrag: false,
+      isDragging: false,
       dragCount: 0,
       startEvent: undefined,
       draggingEvent: undefined,
@@ -177,12 +209,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     (function regionDataPointers(){
       for (i=0;i<8;i++){
         dRegions[i].indexList = [];
-        if(i==0){
-          dRegions[0].visibleCount=1;
-        }
-        else{
-          dRegions[i].visibleCount = 0
-        }
+
       }
       for (i=0;i<totalVoyages;i++){
         var regionID = Voyages[i].landingRegion;
@@ -239,10 +266,9 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       //Case: linear Zooming (year spacing consistent)
       if(preferences.zoomIsLinear){
         var yearStep = preferences.zoomSpeed;
-
+        //Faster Scrolling advances year faster
         if (preferences.useDelta){
-          yearStep += (
-            Math.abs(deltaY/50));
+          yearStep += (Math.abs(deltaY/50));
         }
         if (yearStep>100){
           yearStep=100;
@@ -264,7 +290,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         console.log(current.scrollCount);
         current.year+=yearFactor*(current.scrollCount);
       }
-      current.year = Math.floor(current.year);
+      current.year = Math.ceil(current.year);
       if (current.year<minYear)
       {
         current.year=minYear;
@@ -303,7 +329,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           current.newEmbarked += voyage.embarked;
           current.newDisembarked += voyage.disembarked;
           current.newAdded++;
-          dRegions[voyage.landingRegion].visibleCount++;
+          visible.regionCount[voyage.landingRegion]++;
         }
         if (i>=totalVoyages){
           i--;
@@ -320,7 +346,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           current.newEmbarked -= voyage.embarked;
           current.newDisembarked -= voyage.disembarked;
           current.newAdded--;
-          dRegions[voyage.landingRegion].visibleCount--;
+
+          visible.regionCount[voyage.landingRegion]--;
         }
           visible.index=i;
       }
@@ -329,6 +356,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       visible.total+=current.newAdded;
       visible.embarked+=current.newEmbarked;
       visible.disembarked+=current.newDisembarked;
+      drawChartData(visible.regionCount);
     }
 
     function updateTextPanel(){
@@ -347,7 +375,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       {
   //      console.log("Before " + dRegions[i].minRadians,dRegions[i].percentRadians);
         dRegions[i].minRadians = tempMinTheta;
-        thetaRange = twoPi *dRegions[i].visibleCount/visible.total;
+        thetaRange = twoPi *visible.regionCount[i]/visible.total;
         dRegions[i].percentRadians = thetaRange;
         tempMinTheta += thetaRange;
         dRegions[i].maxRadians = tempMinTheta;
@@ -363,7 +391,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       var y1 = r*Math.sin(minTheta);
       var x2 = r*Math.cos(maxTheta);
       var y2 = r*Math.sin(maxTheta);
-
+      //Use large arc if arc angle is greater than pi
       if(maxTheta-minTheta>Math.PI) {
         flag1=1;
       }
@@ -397,8 +425,10 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         //New Painting Implementation based on regions
         for (rID=0;rID<8;rID++){
           region = dRegions[rID];
-          length = region.visibleCount;
+          length = visible.regionCount[rID];
+          //set circle fill color
           if(preferences.showColors){
+            //  if(selection.currentRegion==rID)
               ctx.fillStyle = region.color;
           }
           ctx.beginPath();
@@ -437,26 +467,51 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         ctx.fill(); */
         ctx.restore();
     }
-    function zoomSubSelection(){
-      if(!(eventLog.isDragging)){
-        clearSubSelection();
+    function zoomSubSelection(event){
+      //Note: should add that on zoomDrag end, if startYear greater than viewradius, zoom out to startYear (i.e. make current.year=startYear)
+      if(eventLog.mouseDown){
+        // IMPLEMENT PROPERLY LATER
+        if (!eventLog.zoom){
+          eventLog.zoomDrag=true;
+          eventLog.isDragging=true;
+          selection.subSelected=true;
+
+        }
+
+        mouseMoveHandler(event);
+        selection.tempSubDimensions.tempR1 = yearToRadius(selection.tempSubDimensions.startYear);
       }
+      else if(selection.subUpperYear>current.year){
+          clearSubSelection();
+        }
+     else if(selection.subSelected){
+        selection.tempSubDimensions.tempR1 = yearToRadius(selection.subUpperYear);
+        selection.tempSubDimensions.tempR2 = yearToRadius(selection.subLowerYear);
+        drawSubRegion();
+        }
+    }
+
+    function zoomToYear(year){
+      console.log("pretend it just zoomed to start year!");
+      //Note: THIS DOES NOTHING YET, BUT SHOULD DO SOMETHING
+      //Will zoom to the specified year in a way compatible with the existing functions
+
 
     }
+
     //---update functions---
 
     //updateTheta - will add
 
     //updateArc - will add
     function preZoomHandler(event){
-      console.log("triggered!");
       d3.select("#scrollHere").style("visibility","hidden");
       myZoomHandler(event);
     }
     //ZOOM HANDLER FUNCTION
     function myZoomHandler(event){
       event.preventDefault();
-      console.log("Zoom Triggered");
+    //  console.log("Zoom Triggered");
 //      console.log(event.deltaY);
       updateDirection(event.deltaY);
 
@@ -466,12 +521,14 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       {
         return;
       }
+      //Update scroll count
       if(current.zoomout){
         current.scrollCount++;
       }
       else{
         current.scrollCount--;
       }
+
       updateYear(event.deltaY);
       storeLastVisible();
       updateVisible();
@@ -481,7 +538,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       if(preferences.showArcs){
         updateArcs();
       }
-      zoomSubSelection();
+      zoomSubSelection(event);
     }
 
     //KEYBOARD HANDLER
@@ -492,6 +549,11 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
         if(preferences.zoomSpeed>1){
           preferences.zoomSpeed--;
         }
+
+      }
+      else if (key =="b"){
+
+        chartContainerD3.style("visibility","visible");
 
       }
       else if (key =="d")
@@ -507,7 +569,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       console.log("down");
       eventLog.mouseDown = true;
       eventLog.isDragging=false;
-      eventLog.startEvent = event;//note: currently not used for anything
+      eventLog.startEvent = event;
+      console.log("startEventID: " + d3.select(event.target).attr("id"));
       eventLog.dragStart=true;
   //    console.log(event.target);
       clickStart();
@@ -515,10 +578,10 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
     function mouseMoveHandler(event){
       if(eventLog.mouseDown){
-        if(eventLog.dragCount>preferences.minDragCount){
+        if((eventLog.dragCount>preferences.minDragCount)||(eventLog.zoomDrag==true)){
           eventLog.isDragging = true;
           eventLog.draggingEvent = event;
-          console.log("moving");
+      //    console.log("moving");
       //    console.log(event.target);
           dragUpdate();
         }
@@ -533,10 +596,12 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       eventLog.mouseDown=false;
       eventLog.endEvent = event;
       eventLog.dragStart=false;
+
       eventLog.dragCount=0;
       if(eventLog.isDragging){
         dragEnd();
         eventLog.isDragging=false;
+        eventLog.zoomDrag=false;
       }
       else{
 
@@ -592,14 +657,21 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       return radius;
       //Note: current implementation changes x and y if r greater than view rad
     }
-
+    console.log("MouseToRadius: " +mouseToRadius(301,20));
     function yearToRadius(year){
       var radius = (year-1514)*(viewradius/(current.year-1513));
       return radius;
     }
 
     function radiusToYear(radius,floor=true){
-      var year = (radius/viewradius)*(current.year-1513)+1514;
+      var year;
+      //Accounts for adjustment by one (1513) used elsewhere
+      if(radius==280){
+        year = current.year;
+      }
+      else{
+        year = (radius/viewradius)*(current.year-1513)+1514;
+      }
       return Math.floor(year); //note: will be slightly out if current year is not matched to match viewrad
     }
 
@@ -613,6 +685,12 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       selection.tempSubDimensions.tempX1=cleanXYR[0];
       selection.tempSubDimensions.tempY1=cleanXYR[1];
       selection.tempSubDimensions.tempR1=cleanXYR[2];
+      console.log("cleanRad: " + cleanXYR[2]);
+      console.log("radActive: " + radiusToYear(279.99));
+      console.log("radView: " + radiusToYear(280));
+      console.log("radOut: " + radiusToYear(280.01));
+      console.log("radVeryOut: " + radiusToYear(400));
+      selection.tempSubDimensions.startYear = radiusToYear(cleanXYR[2]);
     }
     function toggleArcs(){
       preferences.showArcs = !(preferences.showArcs);
@@ -685,6 +763,10 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
           //set new selection
           selection.current=target;
           selection.currentID="#"+ d3.select(target).attr("id");
+        /*  if(d3.select(target).matches(".arc")){
+          //  selection.currentRegion = d3.select(target).data.regionID
+        }*/
+
           console.log("selectionID: "+selection.currentID);
           setArcBorder(target);
           console.log("Clipping Region!");
@@ -733,6 +815,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       subSelectionD3.attr("visibilty","hidden");
       subSelectionD3.attr("d","");
       selection.subStatus = "cleared";
+      selection.subSelected = false;
     }
     function updateSubDimensions(){
       var r1 = selection.tempSubDimensions.tempR1;
@@ -745,22 +828,36 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       selection.subDimensions.R2= upperR;
     }
     function dragEnd(){
+      var startTarget = eventLog.startEvent.target;
       var endTarget = eventLog.endEvent.target;
       console.log("End Target Object: " + endTarget);
       console.log("End Target ID: " + d3.select(endTarget).attr("id"));
-      var startedOff = eventLog.startEvent.target.matches("#svgLayer");
-      var endedOff = eventLog.endEvent.target.matches("#svgLayer");
-      if(!(startedOff && endedOff)){
-      updateSubDimensions();
-      console.log("finished dragging!");
-      console.log("Year Lower: " + selection.subLowerYear + "Upper: " + selection.subUpperYear);
+      var startedOff = startTarget.matches("#svgLayer");
+      var endedOff = endTarget.matches("#svgLayer");
+      if((startedOff && endedOff)&&(!eventLog.zoomDrag)){
+        console.log("Didn't Update Sub Dimensions!");
       }
       else
       {
-        console.log("Didn't Update Sub Dimensions!");
+        //Zoom out if necessary so entire sub selection is in view
+        //Only important at end of a zoomDrag
+        if (selection.subUpperYear > current.year){
+          zoomToYear(current.year);
+        }
+
+        updateSubDimensions();
+        console.log("finished dragging!");
+        console.log("Year Lower: " + selection.subLowerYear);
+        console.log("Year Upper: " + selection.subUpperYear);
       }
     }
     function dragUpdate(){
+      //get mouse position
+      var mx = eventLog.draggingEvent.clientX;
+      var my = eventLog.draggingEvent.clientY;
+      //process coordinates
+      var cleanXYR = processMousePos(mx,my);
+
       //Special tasks when dragging first starts
       if (eventLog.dragStart){
         selection.subSelected=true; //need to FIX THIS - just put it here temporarily. Never goes back to false.
@@ -773,11 +870,7 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
       else{
         console.log("dragging");
       }
-      //get mouse position
-      var mx = eventLog.draggingEvent.clientX;
-      var my = eventLog.draggingEvent.clientY;
-      //process coordinates
-      var cleanXYR = processMousePos(mx,my);
+
       //store processed data in tempSubDimensions
       selection.tempSubDimensions.tempX2 = cleanXYR[0];
       selection.tempSubDimensions.tempY2 = cleanXYR[1];
@@ -806,7 +899,8 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
 
     function clipSubRegion(){
-      if((selection.subSelected) && (!selection.isDefault)){
+      console.log(selection.subSelected);
+      if((!selection.isDefault)){
         console.log("changing clip Path");
         useClipD3.attr("xlink:href",selection.currentID);
       }
@@ -833,6 +927,26 @@ d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
     }
 
 
+    function updateBars(){
+      var maxdata = d3.max(visible.regionCount);
+      console.log(maxdata);
+      var barThickness = chartPrefs.barThickness;
+      var regionWidth = chartPrefs.regionWidth;
+      var barHeight;
+      var regionLeft, regionMid,barLeft;
+      var barWidth = regionWidth*barThickness;
+
+      bars.attr("x",function(d,i){return (chartPrefs.offsetX + regionWidth*(i+1/2-barThickness/2));})
+          .attr("y",function(d,i){return (chartPrefs.offsetY - (d/(maxdata))*chartPrefs.maxBarHeight);})
+          .attr("width",regionWidth*barThickness)
+          .attr("height", function(d,i){return (d/maxdata)*chartPrefs.maxBarHeight;})
+          .attr("fill",function(d,i){return dRegions[i].color;});
+    }
+    function drawChartData(regiondata){
+      bars.data(regiondata);
+      updateBars();
+    }
+    updateBars();
     setup();
   });
 });

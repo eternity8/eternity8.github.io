@@ -110,3 +110,8 @@ canvas {
   font-family: arial;
   -webkit-text-stroke: 3px white;
 }
+
+#chartContainer {
+  position: absolute;
+  right: 20px;
+}
