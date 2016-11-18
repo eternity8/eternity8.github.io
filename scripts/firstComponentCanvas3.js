@@ -74,9 +74,9 @@ chartContainerD3.style("visibility","hidden");
 
 
 //EssentialSlaveData variables: yearam, embarked, disembarked, rand, landingRegion, baseRadius, shiftedYear
-d3.csv("http://localhost/data/essentialSlaveData.csv", function(Voyages){
+d3.csv("data/essentialSlaveData.csv", function(Voyages){
   //Regions variables: regionName, percentVisible, percentRadians, minRadians, maxRadians, color
-  d3.csv("http://localhost/data/regions.csv", function(dRegions){
+  d3.csv("data/regions.csv", function(dRegions){
 
     console.log("Canvas Re-Write!");
 
